@@ -42,6 +42,6 @@ DO NOT DELETE THIS FILE. Update it after every completed chunk.
 - [ ] 12. Final verification (npm install dry-run check, file count, zip)
 
 ## Notes for resuming
-- Working dir: /home/claude/tally-app
+- Working dir: /home/.../tally-app
 - Once a chunk is checked off, do not redo it - just verify file exists with `ls`/`view` then move to next unchecked chunk
 - Final output should be zipped to /mnt/user-data/outputs/tally-app-reactnative.zip

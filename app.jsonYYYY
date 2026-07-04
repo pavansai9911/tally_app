@@ -9,26 +9,17 @@
     "splash": {
       "backgroundColor": "#FFFFFF"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "android": {
       "package": "com.tally.app",
       "adaptiveIcon": {
         "backgroundColor": "#3D5AFE"
-      },
-      "permissions": [
-        "android.permission.USE_BIOMETRIC",
-        "android.permission.USE_FINGERPRINT"
-      ]
+      }
     },
     "plugins": [
+      "expo-sqlite",
       "expo-local-authentication"
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "93d076b3-8217-4a2c-a96f-f3ca47a4d3db"
-      }
-    }
+    ]
   }
 }
+
