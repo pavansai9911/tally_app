@@ -1,4 +1,4 @@
-import { getDb, genId } from './database';
+import { getDb, genId, buildUpdate } from './database';
 
 export interface Account {
   id: string;
@@ -50,10 +50,11 @@ export async function createAccount(input: Omit<Account, 'id' | 'archived' | 'so
 
 export async function updateAccount(id: string, input: Partial<Account>): Promise<void> {
   const db = await getDb();
-  const fields = Object.keys(input);
-  if (fields.length === 0) return;
-  const setClause = fields.map(f => `${f} = ?`).join(', ');
-  await db.runAsync(`UPDATE accounts SET ${setClause} WHERE id = ?`, [...fields.map(f => (input as any)[f]), id]);
+  const { clause, values } = buildUpdate<Account>(input, [
+    'name', 'type', 'icon', 'color', 'starting_balance', 'include_in_total', 'archived', 'sort_order',
+  ]);
+  if (!clause) return;
+  await db.runAsync(`UPDATE accounts SET ${clause} WHERE id = ?`, [...values, id]);
 }
 
 export async function deleteAccount(id: string): Promise<void> {

@@ -6,6 +6,7 @@ export interface OnboardingData {
   accountName: string;
   accountType: 'cash' | 'bank' | 'card' | 'wallet';
   startingBalance: string;
+  pinSet: boolean;
   biometricEnabled: boolean;
 }
 
@@ -16,7 +17,8 @@ export function useOnboardingState() {
     accountName: 'Cash',
     accountType: 'cash',
     startingBalance: '0',
-    biometricEnabled: true,
+    pinSet: false,
+    biometricEnabled: false,
   });
 
   const update = (patch: Partial<OnboardingData>) => setData(prev => ({ ...prev, ...patch }));

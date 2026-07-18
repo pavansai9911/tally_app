@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, SafeAreaView, ScrollView, Pressable } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { ProgressBar } from '@/components/ui';
@@ -28,14 +28,14 @@ export default function BudgetDetailScreen({ navigation, route }: Props) {
     })();
   }, [route.params.id]);
 
-  if (!budget) return <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} />;
+  if (!budget) return <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }} />;
 
   const pct = budget.spent / budget.monthly_limit;
   const remaining = budget.monthly_limit - budget.spent;
   const daysLeft = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate() - new Date().getDate();
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8 }}>
         <Pressable onPress={() => navigation.goBack()}><Feather name="chevron-left" size={24} color={colors.neutral900} /></Pressable>
         <Pressable onPress={() => navigation.navigate('AddEditBudget', { id: budget.id })}><Feather name="edit-2" size={20} color={colors.neutral900} /></Pressable>

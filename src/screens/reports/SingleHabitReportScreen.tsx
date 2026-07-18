@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, SafeAreaView, ScrollView, Pressable } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { ProgressRing, GroupedBarChart } from '@/components/charts';
-import { todayKey } from '@/utils/format';
+import { todayKey, toDateKey, shortMonthFromKey } from '@/utils/format';
 import { getHabit, calculateStreaks, Habit } from '@/db';
 import { ReportsStackParamList } from '@/navigation/RootNavigator';
 
@@ -23,17 +23,17 @@ export default function SingleHabitReportScreen({ navigation, route }: Props) {
     })();
   }, [route.params.habitId]);
 
-  if (!habit) return <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} />;
+  if (!habit) return <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }} />;
 
   const monthLabels = Array.from({ length: 6 }).map((_, i) => {
     const d = new Date();
     d.setMonth(d.getMonth() - (5 - i));
-    return d.toLocaleDateString('en-IN', { month: 'short' });
+    return shortMonthFromKey(toDateKey(d));
   });
   const trendShape = [0.5, 0.55, 0.62, 0.7, 0.8, streaks.rate30d / 100];
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 }}>
         <Pressable onPress={() => navigation.goBack()}><Feather name="chevron-left" size={24} color={colors.neutral900} /></Pressable>
         <Text style={{ ...typography.h3, color: colors.neutral900 }}>{habit.name}</Text>

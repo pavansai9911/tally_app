@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, SafeAreaView, Pressable, ScrollView, Alert } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Button, Input, SegmentOption, ToggleSwitch } from '@/components/ui';
+import { DateField } from '@/components/DateTimeField';
 import {
   createRecurringRule, updateRecurringRule, deleteRecurringRule, listRecurringRules,
   listAccounts, listCategories, AccountWithBalance, Category,
 } from '@/db';
+import { todayKey } from '@/utils/format';
+import { haptic } from '@/utils/haptics';
 import { MoneyStackParamList } from '@/navigation/RootNavigator';
 
 type Props = NativeStackScreenProps<MoneyStackParamList, 'AddEditRecurring'>;
@@ -22,7 +25,7 @@ export default function AddEditRecurringScreen({ navigation, route }: Props) {
   const [frequency, setFrequency] = useState<'weekly' | 'monthly' | 'yearly'>('monthly');
   const [accountId, setAccountId] = useState<string | null>(null);
   const [categoryId, setCategoryId] = useState<string | null>(null);
-  const [nextDate, setNextDate] = useState(new Date().toISOString().slice(0, 10));
+  const [nextDate, setNextDate] = useState(todayKey());
   const [autoAdd, setAutoAdd] = useState(true);
   const [accounts, setAccounts] = useState<AccountWithBalance[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -60,6 +63,7 @@ export default function AddEditRecurringScreen({ navigation, route }: Props) {
     };
     if (editId) await updateRecurringRule(editId, payload);
     else await createRecurringRule(payload);
+    haptic('notificationSuccess');
     navigation.goBack();
   }
 
@@ -71,7 +75,7 @@ export default function AddEditRecurringScreen({ navigation, route }: Props) {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 }}>
         <Pressable onPress={() => navigation.goBack()}><Feather name="x" size={22} color={colors.neutral900} /></Pressable>
         <Text style={{ ...typography.h3, color: colors.neutral900 }}>{editId ? 'Edit recurring' : 'New recurring'}</Text>
@@ -93,12 +97,7 @@ export default function AddEditRecurringScreen({ navigation, route }: Props) {
           <SegmentOption label="Yearly" selected={frequency === 'yearly'} onPress={() => setFrequency('yearly')} />
         </View>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, borderTopWidth: 0.5, borderBottomWidth: 0.5, borderColor: colors.surfaceBorder }}>
-          <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>Next date</Text>
-          <Text style={{ ...typography.bodyMedium, fontWeight: '600', color: colors.neutral900 }}>
-            {new Date(nextDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-          </Text>
-        </View>
+        <DateField label="Next date" value={nextDate} onChange={setNextDate} minimumDate={new Date(2000, 0, 1)} />
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, borderBottomWidth: 0.5, borderColor: colors.surfaceBorder }}>
           <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>Account</Text>
           <Text style={{ ...typography.bodyMedium, fontWeight: '600', color: colors.neutral900 }}>

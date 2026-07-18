@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, SafeAreaView, ScrollView, Pressable } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Button } from '@/components/ui';
@@ -33,13 +33,13 @@ export default function AccountDetailScreen({ navigation, route }: Props) {
     })();
   }, [route.params.id]);
 
-  if (!account) return <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} />;
+  if (!account) return <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }} />;
 
   const inflow = txs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const outflow = txs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8 }}>
         <Pressable onPress={() => navigation.goBack()}><Feather name="chevron-left" size={24} color={colors.neutral900} /></Pressable>
         <Feather name="more-horizontal" size={20} color={colors.neutral900} />

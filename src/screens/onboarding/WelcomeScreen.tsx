@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, SafeAreaView } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from 'react-native-vector-icons/Feather';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Button } from '@/components/ui';
 import { ProgressDots } from './ProgressDots';
@@ -8,7 +8,7 @@ import { ProgressDots } from './ProgressDots';
 export default function WelcomeScreen({ onNext }: { onNext: () => void }) {
   const { colors, typography } = useTheme();
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }}>
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 }}>
         <View style={{ width: 84, height: 84, borderRadius: 20, backgroundColor: colors.accent500, alignItems: 'center', justifyContent: 'center', marginBottom: 28 }}>
           <Feather name="layers" size={40} color="#FFFFFF" />

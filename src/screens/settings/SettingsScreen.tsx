@@ -1,46 +1,84 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, SafeAreaView, ScrollView, Pressable } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import React, { useCallback, useState } from 'react';
+import { View, Text, SafeAreaView, ScrollView, Pressable, Alert } from 'react-native';
+import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '@/theme/ThemeProvider';
 import { ToggleSwitch } from '@/components/ui';
-import { getSetting, setSetting } from '@/db';
+import {
+  isPinSet, clearPin, isBiometricAvailable, isBiometricEnabled, setBiometricEnabled,
+} from '@/services/lock';
 import { RootStackParamList } from '@/navigation/RootNavigator';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
-export default function SettingsScreen({ navigation }: Props) {
-  const { colors, typography, radius, mode, setMode } = useTheme();
-  const [lockEnabled, setLockEnabled] = useState(false);
-  const [currency, setCurrency] = useState('INR');
+const APP_VERSION = '1.0.0';
 
-  useEffect(() => {
-    getSetting('lock_enabled').then(v => setLockEnabled(v === '1'));
-    getSetting('currency').then(v => setCurrency(v ?? 'INR'));
+export default function SettingsScreen({ navigation }: Props) {
+  const { colors, typography, radius, mode } = useTheme();
+  const [lockEnabled, setLockEnabled] = useState(false);
+  const [biometricOn, setBiometricOn] = useState(false);
+  const [biometricHardware, setBiometricHardware] = useState(false);
+
+  const reload = useCallback(() => {
+    (async () => {
+      setLockEnabled(await isPinSet());
+      setBiometricOn(await isBiometricEnabled());
+      setBiometricHardware(await isBiometricAvailable());
+    })();
   }, []);
 
+  useFocusEffect(reload);
+
   async function toggleLock(v: boolean) {
-    setLockEnabled(v);
-    await setSetting('lock_enabled', v ? '1' : '0');
+    if (v) {
+      if (await isPinSet()) {
+        setLockEnabled(true);
+      } else {
+        navigation.navigate('SettingsSub', { section: 'pin' });
+      }
+    } else {
+      Alert.alert('Turn off app lock?', 'Your PIN will be removed. Your data stays on this device.', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Turn off',
+          style: 'destructive',
+          onPress: async () => {
+            await clearPin();
+            setLockEnabled(false);
+            setBiometricOn(false);
+          },
+        },
+      ]);
+    }
+  }
+
+  async function toggleBiometric(v: boolean) {
+    setBiometricOn(v);
+    await setBiometricEnabled(v);
   }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.neutral50 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 }}>
-        <Pressable onPress={() => navigation.goBack()}><Feather name="chevron-left" size={24} color={colors.neutral900} /></Pressable>
+        <Pressable onPress={() => navigation.goBack()} hitSlop={8} accessibilityLabel="Back">
+          <Feather name="chevron-left" size={24} color={colors.neutral900} />
+        </Pressable>
         <Text style={{ ...typography.h3, color: colors.neutral900 }}>Settings</Text>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
         <SectionLabel title="General" />
         <Card>
-          <Row label="Currency" value={currency} onPress={() => navigation.navigate('SettingsSub', { section: 'currency' })} />
           <Row label="Theme" value={mode === 'system' ? 'System' : mode === 'dark' ? 'Dark' : 'Light'} onPress={() => navigation.navigate('SettingsSub', { section: 'theme' })} last />
         </Card>
 
         <SectionLabel title="Security" />
         <Card>
-          <ToggleRow label="App lock" value={lockEnabled} onValueChange={toggleLock} />
+          <ToggleRow label="App lock (PIN)" value={lockEnabled} onValueChange={toggleLock} />
+          {lockEnabled && biometricHardware && (
+            <ToggleRow label="Biometric unlock" value={biometricOn} onValueChange={toggleBiometric} />
+          )}
           <Row label="Change PIN" value="" onPress={() => navigation.navigate('SettingsSub', { section: 'pin' })} last />
         </Card>
 
@@ -58,7 +96,7 @@ export default function SettingsScreen({ navigation }: Props) {
 
         <SectionLabel title="About" />
         <Card>
-          <Row label="Version" value="1.0.0" onPress={() => {}} />
+          <Row label="Version" value={APP_VERSION} onPress={() => {}} />
           <Row label="Privacy" value="" onPress={() => navigation.navigate('SettingsSub', { section: 'privacy' })} last />
         </Card>
       </ScrollView>
@@ -73,7 +111,7 @@ function SectionLabel({ title }: { title: string }) {
 
 function Card({ children }: { children: React.ReactNode }) {
   const { colors, radius } = useTheme();
-  return <View style={{ backgroundColor: colors.surfaceCard, borderRadius: radius.lg, paddingHorizontal: 16 }}>{children}</View>;
+  return <View style={{ backgroundColor: colors.surfaceCard, borderRadius: radius.lg, paddingHorizontal: 16, borderWidth: 0.5, borderColor: colors.surfaceBorder }}>{children}</View>;
 }
 
 function Row({ label, value, onPress, last = false }: { label: string; value: string; onPress: () => void; last?: boolean }) {
@@ -82,7 +120,7 @@ function Row({ label, value, onPress, last = false }: { label: string; value: st
     <Pressable onPress={onPress} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, borderBottomWidth: last ? 0 : 0.5, borderBottomColor: colors.surfaceBorder }}>
       <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>{label}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-        {value && <Text style={{ ...typography.bodySmall, color: colors.neutral400 }}>{value}</Text>}
+        {value ? <Text style={{ ...typography.bodySmall, color: colors.neutral400 }}>{value}</Text> : null}
         <Feather name="chevron-right" size={16} color={colors.neutral300} />
       </View>
     </Pressable>

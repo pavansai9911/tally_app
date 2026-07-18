@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, SafeAreaView, ScrollView, Pressable } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from 'react-native-vector-icons/Feather';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -20,7 +20,7 @@ export default function AccountsListScreen({ navigation }: Props) {
   const total = accounts.filter(a => a.include_in_total).reduce((s, a) => s + a.current_balance, 0);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 }}>
         <Pressable onPress={() => navigation.goBack()}><Feather name="chevron-left" size={24} color={colors.neutral900} /></Pressable>
         <Text style={{ ...typography.h3, color: colors.neutral900 }}>Accounts</Text>
