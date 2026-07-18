@@ -60,7 +60,7 @@ export function DonutChart({
 import { Text as SvgTextEl } from 'react-native-svg';
 function SvgText({ x, y, text, size, color, weight }: { x: number; y: number; text: string; size: number; color: string; weight?: string }) {
   return (
-    <SvgTextEl x={x} y={y} fontSize={size} fill={color} fontWeight={weight ?? '400'} textAnchor="middle" fontFamily="Inter_600SemiBold">
+    <SvgTextEl x={x} y={y} fontSize={size} fill={color} fontWeight={weight ?? '400'} textAnchor="middle">
       {text}
     </SvgTextEl>
   );

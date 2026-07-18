@@ -1,12 +1,12 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, SafeAreaView, ScrollView, Pressable } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from 'react-native-vector-icons/Feather';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { EmptyState } from '@/components/ui';
 import { mapIcon } from '@/utils/iconMap';
-import { formatCurrency } from '@/utils/format';
+import { formatCurrency, formatDateLabel } from '@/utils/format';
 import { listRecurringRules, listCategories, RecurringRule, Category } from '@/db';
 import { MoneyStackParamList } from '@/navigation/RootNavigator';
 
@@ -34,7 +34,7 @@ export default function RecurringListScreen({ navigation }: Props) {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 }}>
         <Pressable onPress={() => navigation.goBack()}><Feather name="chevron-left" size={24} color={colors.neutral900} /></Pressable>
         <Text style={{ ...typography.h3, color: colors.neutral900 }}>Recurring</Text>
@@ -73,7 +73,7 @@ export default function RecurringListScreen({ navigation }: Props) {
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>{r.name}</Text>
-                      <Text style={{ ...typography.caption, color: colors.neutral400 }}>{r.frequency[0].toUpperCase() + r.frequency.slice(1)} · Next: {new Date(r.next_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</Text>
+                      <Text style={{ ...typography.caption, color: colors.neutral400 }}>{r.frequency[0].toUpperCase() + r.frequency.slice(1)} · Next: {formatDateLabel(r.next_date)}</Text>
                     </View>
                     <Text style={{ ...typography.bodySmallMedium, color: colors.expense }}>-{formatCurrency(r.amount)}</Text>
                   </Pressable>
@@ -92,7 +92,7 @@ export default function RecurringListScreen({ navigation }: Props) {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>{r.name}</Text>
-                    <Text style={{ ...typography.caption, color: colors.neutral400 }}>{r.frequency[0].toUpperCase() + r.frequency.slice(1)} · Next: {new Date(r.next_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</Text>
+                    <Text style={{ ...typography.caption, color: colors.neutral400 }}>{r.frequency[0].toUpperCase() + r.frequency.slice(1)} · Next: {formatDateLabel(r.next_date)}</Text>
                   </View>
                   <Text style={{ ...typography.bodySmallMedium, color: colors.income }}>+{formatCurrency(r.amount)}</Text>
                 </View>

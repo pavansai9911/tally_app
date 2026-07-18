@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, SafeAreaView, Pressable, ScrollView } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Button, Input, ToggleSwitch } from '@/components/ui';
@@ -9,7 +9,7 @@ import { MoneyStackParamList } from '@/navigation/RootNavigator';
 
 type Props = NativeStackScreenProps<MoneyStackParamList, 'AddEditAccount'>;
 
-const TYPES: Array<{ key: 'cash' | 'bank' | 'card' | 'wallet'; label: string; icon: keyof typeof Feather.glyphMap }> = [
+const TYPES: Array<{ key: 'cash' | 'bank' | 'card' | 'wallet'; label: string; icon: string }> = [
   { key: 'cash', label: 'Cash', icon: 'dollar-sign' },
   { key: 'bank', label: 'Bank', icon: 'home' },
   { key: 'card', label: 'Card', icon: 'credit-card' },
@@ -53,7 +53,7 @@ export default function AddEditAccountScreen({ navigation, route }: Props) {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 }}>
         <Pressable onPress={() => navigation.goBack()}><Feather name="x" size={22} color={colors.neutral900} /></Pressable>
         <Text style={{ ...typography.h3, color: colors.neutral900 }}>{editId ? 'Edit account' : 'New account'}</Text>

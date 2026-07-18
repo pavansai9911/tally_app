@@ -1,75 +1,84 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
+import React, { useEffect, useState, useMemo } from 'react';
+import { View, ActivityIndicator, StatusBar } from 'react-native';
 import {
-  useFonts,
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from '@expo-google-fonts/inter';
-import * as SplashScreen from 'expo-splash-screen';
+  NavigationContainer,
+  DefaultTheme,
+  DarkTheme,
+  Theme,
+} from '@react-navigation/native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
 import { getDb, hasCompletedOnboarding, getSetting } from '@/db';
 import { RootNavigator } from '@/navigation/RootNavigator';
 import OnboardingNavigator from '@/screens/onboarding/OnboardingNavigator';
 import LockScreen from '@/screens/lock/LockScreen';
-
-SplashScreen.preventAutoHideAsync().catch(() => {});
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { runStartupTasks } from '@/services/startup';
+import { isPinSet, isBiometricAvailable } from '@/services/lock';
 
 type AppPhase = 'loading' | 'onboarding' | 'locked' | 'unlocked';
 
 function AppInner() {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const [phase, setPhase] = useState<AppPhase>('loading');
-  const [fontsLoaded] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
-  });
 
   useEffect(() => {
     (async () => {
-      await getDb(); // initializes schema + seeds default categories
-      const onboarded = await hasCompletedOnboarding();
-      if (!onboarded) {
+      try {
+        await getDb(); // runs migrations + seeds defaults
+        const onboarded = await hasCompletedOnboarding();
+        if (!onboarded) {
+          setPhase('onboarding');
+          return;
+        }
+        await runStartupTasks();
+        const lockEnabled = (await getSetting('lock_enabled')) === '1';
+        const biometricEnabled = (await getSetting('biometric_enabled')) === '1';
+        // Only actually lock if we have a real credential to check against.
+        const canLock = lockEnabled && ((await isPinSet()) || (biometricEnabled && (await isBiometricAvailable())));
+        setPhase(canLock ? 'locked' : 'unlocked');
+      } catch {
+        // Fail safe: send the user to onboarding rather than a blank screen.
         setPhase('onboarding');
-        return;
       }
-      const lockEnabled = await getSetting('lock_enabled');
-      setPhase(lockEnabled === '1' ? 'locked' : 'unlocked');
     })();
   }, []);
 
-  const onLayoutRootView = useCallback(async () => {
-    if (fontsLoaded && phase !== 'loading') {
-      await SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded, phase]);
+  const navTheme = useMemo<Theme>(() => {
+    const base = isDark ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        background: colors.neutral0,
+        card: colors.surfaceCard,
+        text: colors.neutral900,
+        border: colors.surfaceBorder,
+        primary: colors.accent500,
+      },
+    };
+  }, [isDark, colors]);
 
-  if (!fontsLoaded || phase === 'loading') {
+  if (phase === 'loading') {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' }}>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.neutral0 }}>
         <ActivityIndicator color={colors.accent500} />
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
-      <StatusBar style="auto" />
-      {phase === 'onboarding' && (
-        <OnboardingNavigator onComplete={() => setPhase('unlocked')} />
-      )}
-      {phase === 'locked' && (
-        <LockScreen onUnlock={() => setPhase('unlocked')} />
-      )}
+    <View style={{ flex: 1, backgroundColor: colors.neutral0 }}>
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent
+      />
+      {phase === 'onboarding' && <OnboardingNavigator onComplete={() => setPhase('unlocked')} />}
+      {phase === 'locked' && <LockScreen onUnlock={() => setPhase('unlocked')} />}
       {phase === 'unlocked' && (
-        <NavigationContainer>
+        <NavigationContainer theme={navTheme}>
           <RootNavigator />
         </NavigationContainer>
       )}
@@ -79,10 +88,12 @@ function AppInner() {
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <AppInner />
-      </ThemeProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <AppInner />
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }

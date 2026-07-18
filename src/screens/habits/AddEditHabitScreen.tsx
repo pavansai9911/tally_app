@@ -1,11 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, SafeAreaView, Pressable, ScrollView } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Button, Input, SegmentOption, ToggleSwitch } from '@/components/ui';
+import { TimeField } from '@/components/DateTimeField';
 import { mapIcon, HABIT_ICON_OPTIONS } from '@/utils/iconMap';
 import { createHabit, updateHabit, getHabit } from '@/db';
+import { haptic } from '@/utils/haptics';
+import {
+  requestNotificationPermission,
+  scheduleHabitReminder,
+  cancelHabitReminder,
+} from '@/services/notifications';
 import { HabitsStackParamList } from '@/navigation/RootNavigator';
 
 type Props = NativeStackScreenProps<HabitsStackParamList, 'AddEditHabit'>;
@@ -24,6 +31,7 @@ export default function AddEditHabitScreen({ navigation, route }: Props) {
   const [scheduleType, setScheduleType] = useState<'daily' | 'specific_days'>('daily');
   const [selectedDays, setSelectedDays] = useState<number[]>([0, 2, 4]);
   const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderTime, setReminderTime] = useState('07:00');
 
   useEffect(() => {
     if (editId) {
@@ -38,6 +46,7 @@ export default function AddEditHabitScreen({ navigation, route }: Props) {
           setScheduleType(h.schedule_type === 'daily' ? 'daily' : 'specific_days');
           if (h.schedule_days) setSelectedDays(JSON.parse(h.schedule_days));
           setReminderEnabled(!!h.reminder_enabled);
+          setReminderTime(h.reminder_time ?? '07:00');
         }
       });
     }
@@ -48,9 +57,16 @@ export default function AddEditHabitScreen({ navigation, route }: Props) {
   }
 
   async function handleSave() {
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      haptic('notificationWarning');
+      return;
+    }
+    if (scheduleType === 'specific_days' && selectedDays.length === 0) {
+      haptic('notificationWarning');
+      return;
+    }
     const payload = {
-      name, type, goal_type: goalType,
+      name: name.trim(), type, goal_type: goalType,
       goal_value: goalType !== 'boolean' ? parseFloat(goalValue) || null : null,
       goal_unit: goalType !== 'boolean' ? goalUnit : null,
       schedule_type: scheduleType,
@@ -58,21 +74,31 @@ export default function AddEditHabitScreen({ navigation, route }: Props) {
       schedule_target: null,
       icon, color: '#3D5AFE',
       reminder_enabled: reminderEnabled ? 1 : 0,
-      reminder_time: reminderEnabled ? '07:00' : null,
+      reminder_time: reminderEnabled ? reminderTime : null,
     };
-    if (editId) await updateHabit(editId, payload);
-    else await createHabit(payload);
+    const habitId = editId ? (await updateHabit(editId, payload), editId) : await createHabit(payload);
+
+    // Schedule or cancel the local reminder for this habit.
+    if (reminderEnabled) {
+      await requestNotificationPermission();
+      const saved = await getHabit(habitId);
+      if (saved) await scheduleHabitReminder(saved);
+    } else {
+      await cancelHabitReminder(habitId);
+    }
+
+    haptic('notificationSuccess');
     navigation.goBack();
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 14 }}>
         <Pressable onPress={() => navigation.goBack()}><Feather name="x" size={22} color={colors.neutral900} /></Pressable>
         <Text style={{ ...typography.h3, color: colors.neutral900 }}>{editId ? 'Edit habit' : 'New habit'}</Text>
         <Pressable onPress={handleSave}><Text style={{ ...typography.bodyMedium, fontWeight: '600', color: colors.accent500 }}>Save</Text></Pressable>
       </View>
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 24 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
         <View style={{ alignItems: 'center', marginBottom: 18 }}>
           <View style={{ width: 60, height: 60, borderRadius: 17, backgroundColor: colors.accentTint, alignItems: 'center', justifyContent: 'center' }}>
             <Feather name={mapIcon(icon)} size={26} color={colors.accent500} />
@@ -131,17 +157,26 @@ export default function AddEditHabitScreen({ navigation, route }: Props) {
           </View>
         )}
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, borderTopWidth: 0.5, borderTopColor: colors.surfaceBorder, marginBottom: 24 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <Feather name="bell" size={18} color={colors.neutral900} />
-            <View>
-              <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>Reminder</Text>
-              <Text style={{ ...typography.caption, color: colors.neutral400 }}>7:00 AM on scheduled days</Text>
+        <View style={{ borderTopWidth: 0.5, borderTopColor: colors.surfaceBorder, marginBottom: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <Feather name="bell" size={18} color={colors.neutral900} />
+              <View>
+                <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>Reminder</Text>
+                <Text style={{ ...typography.caption, color: colors.neutral400 }}>
+                  {reminderEnabled ? 'A notification on your scheduled days' : 'Off'}
+                </Text>
+              </View>
             </View>
+            <ToggleSwitch value={reminderEnabled} onValueChange={setReminderEnabled} />
           </View>
-          <ToggleSwitch value={reminderEnabled} onValueChange={setReminderEnabled} />
+          {reminderEnabled && <TimeField label="Reminder time" value={reminderTime} onChange={setReminderTime} />}
         </View>
       </ScrollView>
+
+      <View style={{ paddingHorizontal: 24, paddingTop: 8, paddingBottom: 16, borderTopWidth: 0.5, borderTopColor: colors.surfaceBorder }}>
+        <Button label={editId ? 'Save changes' : 'Create habit'} onPress={handleSave} />
+      </View>
     </SafeAreaView>
   );
 }

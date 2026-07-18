@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, SafeAreaView, ScrollView, Pressable, Alert } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { mapIcon } from '@/utils/iconMap';
-import { todayKey } from '@/utils/format';
+import { todayKey, toDateKey, formatMonthYear } from '@/utils/format';
 import {
   getHabit, calculateStreaks, getLogsInRange, archiveHabit, deleteHabitPermanently,
   Habit, HabitLog,
@@ -29,12 +29,12 @@ export default function HabitDetailScreen({ navigation, route }: Props) {
         const start = new Date();
         start.setDate(1);
         const end = new Date(start.getFullYear(), start.getMonth() + 1, 0);
-        setLogs(await getLogsInRange(h.id, start.toISOString().slice(0, 10), end.toISOString().slice(0, 10)));
+        setLogs(await getLogsInRange(h.id, toDateKey(start), toDateKey(end)));
       }
     })();
   }, [route.params.id]);
 
-  if (!habit) return <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} />;
+  if (!habit) return <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }} />;
 
   function confirmDelete() {
     Alert.alert(
@@ -53,7 +53,7 @@ export default function HabitDetailScreen({ navigation, route }: Props) {
   const logMap = new Map(logs.map(l => [l.log_date, l]));
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8 }}>
         <Pressable onPress={() => navigation.goBack()}><Feather name="chevron-left" size={24} color={colors.neutral900} /></Pressable>
         <View style={{ flexDirection: 'row', gap: 18 }}>
@@ -82,7 +82,7 @@ export default function HabitDetailScreen({ navigation, route }: Props) {
         </View>
 
         <Text style={{ ...typography.caption, color: colors.neutral400, textTransform: 'uppercase', marginBottom: 10 }}>
-          {now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+          {formatMonthYear(now)}
         </Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginBottom: 8 }}>
           {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -125,7 +125,7 @@ export default function HabitDetailScreen({ navigation, route }: Props) {
   );
 }
 
-function StatTile({ icon, value, label, bg, color }: { icon: keyof typeof Feather.glyphMap; value: string; label: string; bg: string; color: string }) {
+function StatTile({ icon, value, label, bg, color }: { icon: string; value: string; label: string; bg: string; color: string }) {
   const { typography, radius } = useTheme();
   return (
     <View style={{ flex: 1, padding: 14, backgroundColor: bg, borderRadius: radius.lg, alignItems: 'center' }}>

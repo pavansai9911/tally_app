@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, SafeAreaView, ScrollView, Pressable, Modal } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from 'react-native-vector-icons/Feather';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -58,7 +58,7 @@ export default function HabitListScreen({ navigation }: Props) {
   const doneCount = todayHabits.filter(h => h.log?.status === 'done').length;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 12, paddingBottom: 12 }}>
         <Text style={{ ...typography.h1, color: colors.neutral900 }}>Habits</Text>
         <Feather name="shuffle" size={20} color={tab === 'all' ? colors.accent500 : colors.neutral900} />
@@ -160,7 +160,7 @@ export default function HabitListScreen({ navigation }: Props) {
 
       <Modal visible={!!sheetHabit} transparent animationType="slide" onRequestClose={() => setSheetHabit(null)}>
         <Pressable style={{ flex: 1, backgroundColor: 'rgba(19,22,26,0.45)', justifyContent: 'flex-end' }} onPress={() => setSheetHabit(null)}>
-          <Pressable style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 }}>
+          <Pressable style={{ backgroundColor: colors.surfaceCard, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 }}>
             <View style={{ width: 36, height: 4, backgroundColor: colors.neutral200, borderRadius: 2, alignSelf: 'center', marginBottom: 18 }} />
             {sheetHabit && (
               <>
@@ -192,7 +192,7 @@ export default function HabitListScreen({ navigation }: Props) {
   );
 }
 
-function SheetButton({ label, icon, color, bg, onPress }: { label: string; icon: keyof typeof Feather.glyphMap; color: string; bg: string; onPress: () => void }) {
+function SheetButton({ label, icon, color, bg, onPress }: { label: string; icon: string; color: string; bg: string; onPress: () => void }) {
   const { typography, radius } = useTheme();
   return (
     <Pressable onPress={onPress} style={{ height: 50, backgroundColor: bg, borderRadius: radius.lg, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, gap: 12, marginBottom: 8 }}>

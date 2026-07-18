@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, Text, SafeAreaView, Pressable } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from 'react-native-vector-icons/Feather';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Button, Input } from '@/components/ui';
 import { OnboardingData } from './useOnboardingState';
 
-const TYPES: Array<{ key: OnboardingData['accountType']; label: string; icon: keyof typeof Feather.glyphMap }> = [
+const TYPES: Array<{ key: OnboardingData['accountType']; label: string; icon: string }> = [
   { key: 'cash', label: 'Cash', icon: 'dollar-sign' },
   { key: 'bank', label: 'Bank', icon: 'home' },
   { key: 'card', label: 'Card', icon: 'credit-card' },
@@ -18,7 +18,7 @@ export default function FirstAccountScreen({
   const { colors, typography, radius } = useTheme();
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }}>
       <Pressable onPress={onBack} style={{ padding: 16 }}>
         <Feather name="chevron-left" size={24} color={colors.neutral900} />
       </Pressable>

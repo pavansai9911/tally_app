@@ -23,8 +23,9 @@ export default function OnboardingNavigator({ onComplete }: { onComplete: () => 
       starting_balance: parseFloat(data.startingBalance || '0') || 0,
       include_in_total: 1,
     });
-    await setSetting('lock_enabled', data.biometricEnabled ? '1' : '0');
-    await setSetting('biometric_enabled', data.biometricEnabled ? '1' : '0');
+    // Lock is only meaningful if a PIN was actually created. Biometric is an add-on to that.
+    await setSetting('lock_enabled', data.pinSet ? '1' : '0');
+    await setSetting('biometric_enabled', data.pinSet && data.biometricEnabled ? '1' : '0');
     await setSetting('onboarding_complete', '1');
     onComplete();
   }

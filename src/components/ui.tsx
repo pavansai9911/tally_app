@@ -103,7 +103,7 @@ export function Input({
           borderWidth: error ? 1 : focused ? 1.5 : 1,
           borderColor: error ? colors.expense : focused ? colors.accent500 : colors.neutral200,
           paddingHorizontal: 14,
-          backgroundColor: editable ? '#FFFFFF' : colors.neutral50,
+          backgroundColor: editable ? colors.surfaceCard : colors.neutral50,
           color: colors.neutral900,
           ...typography.body,
         }}

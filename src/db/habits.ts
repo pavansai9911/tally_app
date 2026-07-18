@@ -1,4 +1,5 @@
-import { getDb, genId } from './database';
+import { getDb, genId, buildUpdate } from './database';
+import { addDaysKey, parseDateKey } from '@/utils/format';
 
 export interface Habit {
   id: string;
@@ -16,6 +17,7 @@ export interface Habit {
   reminder_time: string | null;
   archived: number;
   sort_order: number;
+  created_at?: string;
 }
 
 export interface HabitLog {
@@ -29,7 +31,7 @@ export interface HabitLog {
 
 export async function listHabits(): Promise<Habit[]> {
   const db = await getDb();
-  return db.getAllAsync<Habit>('SELECT * FROM habits WHERE archived = 0 ORDER BY sort_order ASC');
+  return db.getAllAsync<Habit>('SELECT * FROM habits WHERE archived = 0 ORDER BY sort_order ASC, created_at ASC');
 }
 
 export async function getHabit(id: string): Promise<Habit | null> {
@@ -37,7 +39,7 @@ export async function getHabit(id: string): Promise<Habit | null> {
   return db.getFirstAsync<Habit>('SELECT * FROM habits WHERE id = ?', [id]);
 }
 
-export async function createHabit(input: Omit<Habit, 'id' | 'archived' | 'sort_order'>): Promise<string> {
+export async function createHabit(input: Omit<Habit, 'id' | 'archived' | 'sort_order' | 'created_at'>): Promise<string> {
   const db = await getDb();
   const id = genId('hab');
   await db.runAsync(
@@ -52,10 +54,12 @@ export async function createHabit(input: Omit<Habit, 'id' | 'archived' | 'sort_o
 
 export async function updateHabit(id: string, input: Partial<Habit>): Promise<void> {
   const db = await getDb();
-  const fields = Object.keys(input);
-  if (fields.length === 0) return;
-  const setClause = fields.map(f => `${f} = ?`).join(', ');
-  await db.runAsync(`UPDATE habits SET ${setClause} WHERE id = ?`, [...fields.map(f => (input as any)[f]), id]);
+  const { clause, values } = buildUpdate<Habit>(input, [
+    'name', 'type', 'goal_type', 'goal_value', 'goal_unit', 'schedule_type', 'schedule_days',
+    'schedule_target', 'icon', 'color', 'reminder_enabled', 'reminder_time', 'archived', 'sort_order',
+  ]);
+  if (!clause) return;
+  await db.runAsync(`UPDATE habits SET ${clause} WHERE id = ?`, [...values, id]);
 }
 
 export async function archiveHabit(id: string): Promise<void> {
@@ -69,24 +73,20 @@ export async function deleteHabitPermanently(id: string): Promise<void> {
   await db.runAsync('DELETE FROM habits WHERE id = ?', [id]);
 }
 
-export async function isHabitDueOn(habit: Habit, date: Date): Promise<boolean> {
+export function isHabitDueOn(habit: Habit, date: Date): boolean {
   if (habit.schedule_type === 'daily') return true;
   if (habit.schedule_type === 'specific_days') {
     const days: number[] = habit.schedule_days ? JSON.parse(habit.schedule_days) : [];
     const weekday = (date.getDay() + 6) % 7; // convert Sun=0 -> Mon=0 indexing
     return days.includes(weekday);
   }
-  // per_week / per_month targets are evaluated as "still due" if under target for the period;
-  // for simplicity in the Today view, treat as always-listed (UI shows progress toward period target).
+  // per_week / per_month targets: always listed in the Today view (UI shows period progress).
   return true;
 }
 
 export async function getLogForDate(habitId: string, date: string): Promise<HabitLog | null> {
   const db = await getDb();
-  return db.getFirstAsync<HabitLog>(
-    'SELECT * FROM habit_logs WHERE habit_id = ? AND log_date = ?',
-    [habitId, date]
-  );
+  return db.getFirstAsync<HabitLog>('SELECT * FROM habit_logs WHERE habit_id = ? AND log_date = ?', [habitId, date]);
 }
 
 export async function upsertLog(habitId: string, date: string, status: HabitLog['status'], value?: number, note?: string): Promise<void> {
@@ -113,78 +113,91 @@ export async function getLogsInRange(habitId: string, startDate: string, endDate
   );
 }
 
+// Absolute floor for streak walks so a "quit" habit with no relapse logs can't loop forever.
+const MAX_STREAK_DAYS = 3660; // ~10 years
+
 /**
- * Streak calculation rules (per spec):
- * - For "build" habits: a "done" or "partial" day continues the streak; a "skipped" day on a due date
- *   does NOT break the streak (skip is treated as a neutral pass, not a failure); an unmarked due day
- *   in the past breaks the streak.
- * - For "quit" habits: streak counts consecutive days where the habit was NOT marked as a relapse.
- *   Absence of a log (no relapse recorded) counts as a successful day.
+ * Streak calculation (all date math in local time via YYYY-MM-DD keys — no UTC drift):
+ * - "build": a done/partial/skipped log on a day continues the streak; an unlogged past day breaks it.
+ *   Today being unlogged does NOT break the streak (it is still "pending" until end of day).
+ * - "quit": every day without a 'skipped' (relapse) log counts as success; a relapse breaks it.
+ * The backward/forward walks are floored at the habit's creation date (or MAX_STREAK_DAYS).
  */
-export async function calculateStreaks(habit: Habit, todayStr: string): Promise<{ current: number; longest: number; totalCompletions: number; rate30d: number }> {
+export async function calculateStreaks(
+  habit: Habit,
+  todayStr: string,
+): Promise<{ current: number; longest: number; totalCompletions: number; rate30d: number }> {
   const db = await getDb();
   const logs = await db.getAllAsync<HabitLog>(
     'SELECT * FROM habit_logs WHERE habit_id = ? ORDER BY log_date DESC',
     [habit.id]
   );
-  const logMap = new Map(logs.map(l => [l.log_date, l]));
+  const logMap = new Map(logs.map((l) => [l.log_date, l]));
+
+  const createdKey = habit.created_at ? habit.created_at.slice(0, 10) : addDaysKey(todayStr, -MAX_STREAK_DAYS);
+  const earliestLogKey = logs.length > 0 ? logs[logs.length - 1].log_date : todayStr;
+  const floorKey = createdKey < earliestLogKey ? createdKey : earliestLogKey;
 
   function isSuccessDay(dateStr: string): boolean {
     const log = logMap.get(dateStr);
     if (habit.type === 'quit') {
-      // success = no relapse logged (absence of a 'skipped'/failure entry counts as success)
       return !log || log.status !== 'skipped';
     }
     if (!log) return false;
     return log.status === 'done' || log.status === 'partial' || log.status === 'skipped';
   }
 
-  // Current streak: walk backward from today
+  // Current streak: walk backward from today (skip an unlogged "pending" today), floored at creation.
+  let cursorKey = todayStr;
+  if (!isSuccessDay(cursorKey)) cursorKey = addDaysKey(cursorKey, -1);
   let current = 0;
-  let cursor = new Date(todayStr);
-  while (true) {
-    const dStr = cursor.toISOString().slice(0, 10);
-    if (isSuccessDay(dStr)) {
-      current++;
-      cursor.setDate(cursor.getDate() - 1);
-    } else {
-      break;
-    }
+  while (cursorKey >= floorKey && isSuccessDay(cursorKey)) {
+    current++;
+    cursorKey = addDaysKey(cursorKey, -1);
   }
 
-  // Longest streak: scan all log history plus today backward 365 days
+  // Longest streak: scan floor..today forward.
   let longest = current;
   let running = 0;
-  const scanStart = new Date(todayStr);
-  scanStart.setDate(scanStart.getDate() - 365);
-  for (let d = new Date(scanStart); d <= new Date(todayStr); d.setDate(d.getDate() + 1)) {
-    const dStr = d.toISOString().slice(0, 10);
-    if (isSuccessDay(dStr)) {
+  let k = floorKey;
+  let guard = 0;
+  while (k <= todayStr && guard < MAX_STREAK_DAYS + 2) {
+    if (isSuccessDay(k)) {
       running++;
-      longest = Math.max(longest, running);
+      if (running > longest) longest = running;
     } else {
       running = 0;
     }
+    k = addDaysKey(k, 1);
+    guard++;
   }
 
-  const totalCompletions = logs.filter(l => l.status === 'done').length;
+  const totalCompletions = logs.filter((l) => l.status === 'done').length;
 
-  const last30 = logs.filter(l => {
-    const diffDays = (new Date(todayStr).getTime() - new Date(l.log_date).getTime()) / 86400000;
-    return diffDays >= 0 && diffDays < 30;
-  });
-  const successIn30 = last30.filter(l => l.status === 'done' || l.status === 'partial').length;
-  const rate30d = last30.length > 0 ? Math.round((successIn30 / 30) * 100) : 0;
+  // 30-day success rate, denominator = days actually observable (avoids understating new habits).
+  const windowStart = addDaysKey(todayStr, -29);
+  const observedDays = createdKey > windowStart ? daysBetween(createdKey, todayStr) + 1 : 30;
+  const last30 = logs.filter((l) => l.log_date >= windowStart && l.log_date <= todayStr);
+  const successIn30 = last30.filter((l) => l.status === 'done' || l.status === 'partial').length;
+  const rate30d = observedDays > 0 ? Math.round((successIn30 / observedDays) * 100) : 0;
 
-  return { current, longest, totalCompletions, rate30d };
+  return { current, longest, totalCompletions, rate30d: Math.min(100, rate30d) };
 }
 
-export async function getTodayHabitsWithStatus(todayStr: string): Promise<Array<Habit & { log: HabitLog | null; streak: number }>> {
+function daysBetween(startKey: string, endKey: string): number {
+  const a = parseDateKey(startKey).getTime();
+  const b = parseDateKey(endKey).getTime();
+  return Math.round((b - a) / 86400000);
+}
+
+export async function getTodayHabitsWithStatus(
+  todayStr: string,
+): Promise<Array<Habit & { log: HabitLog | null; streak: number }>> {
   const habits = await listHabits();
-  const result = [];
+  const today = parseDateKey(todayStr);
+  const result: Array<Habit & { log: HabitLog | null; streak: number }> = [];
   for (const habit of habits) {
-    const due = await isHabitDueOn(habit, new Date(todayStr));
-    if (!due) continue;
+    if (!isHabitDueOn(habit, today)) continue;
     const log = await getLogForDate(habit.id, todayStr);
     const { current } = await calculateStreaks(habit, todayStr);
     result.push({ ...habit, log, streak: current });

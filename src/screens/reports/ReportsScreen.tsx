@@ -1,17 +1,18 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, SafeAreaView, ScrollView, Pressable } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from 'react-native-vector-icons/Feather';
 import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { EmptyState } from '@/components/ui';
 import { DonutChart, GroupedBarChart, TrendLineChart, Heatmap } from '@/components/charts';
 import { mapIcon } from '@/utils/iconMap';
-import { formatCurrency, monthKey, todayKey } from '@/utils/format';
+import { formatCurrency, monthKey, todayKey, toDateKey, parseDateKey, shortMonthFromKey } from '@/utils/format';
 import {
   getMonthSummary, getExpenseBreakdownByCategory, getMonthlyTrend,
   listHabits, calculateStreaks, getLogsInRange,
 } from '@/db';
+import { exportTransactionsCsv } from '@/services/backup';
 import { ReportsStackParamList } from '@/navigation/RootNavigator';
 
 type Props = NativeStackScreenProps<ReportsStackParamList, 'Reports'>;
@@ -45,7 +46,7 @@ export default function ReportsScreen({ navigation }: Props) {
     setSummary(await getMonthSummary(mk));
     setBreakdown(await getExpenseBreakdownByCategory(mk));
     const keys = lastNMonthKeys(6);
-    setMonthLabels(keys.map(k => new Date(k + '-01').toLocaleDateString('en-IN', { month: 'short' })));
+    setMonthLabels(keys.map(k => shortMonthFromKey(k)));
     const months = await getMonthlyTrend(keys);
     setTrend(months);
 
@@ -74,13 +75,13 @@ export default function ReportsScreen({ navigation }: Props) {
       const start = new Date();
       start.setDate(start.getDate() - 16 * 7);
       const cells: Array<{ date: string; intensity: 0 | 1 | 2 | 3 }> = [];
-      const allLogs = await Promise.all(habits.map(h => getLogsInRange(h.id, start.toISOString().slice(0, 10), today)));
+      const allLogs = await Promise.all(habits.map(h => getLogsInRange(h.id, toDateKey(start), today)));
       const countByDate = new Map<string, number>();
       allLogs.flat().forEach(l => {
         if (l.status === 'done') countByDate.set(l.log_date, (countByDate.get(l.log_date) ?? 0) + 1);
       });
-      for (let d = new Date(start); d <= new Date(today); d.setDate(d.getDate() + 1)) {
-        const dStr = d.toISOString().slice(0, 10);
+      for (let d = new Date(start); d <= parseDateKey(today); d.setDate(d.getDate() + 1)) {
+        const dStr = toDateKey(d);
         const count = countByDate.get(dStr) ?? 0;
         const intensity: 0 | 1 | 2 | 3 = count === 0 ? 0 : count === 1 ? 1 : count === 2 ? 2 : 3;
         cells.push({ date: dStr, intensity });
@@ -95,10 +96,12 @@ export default function ReportsScreen({ navigation }: Props) {
   const hasHabitsData = leaderboard.some(l => l.streak > 0) || habitStats.activeCount > 0;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 12, paddingBottom: 12 }}>
         <Text style={{ ...typography.h1, color: colors.neutral900 }}>Reports</Text>
-        <Feather name="share" size={19} color={colors.neutral900} />
+        <Pressable onPress={() => exportTransactionsCsv().catch(() => {})} hitSlop={8} accessibilityLabel="Export transactions as CSV">
+          <Feather name="share" size={19} color={colors.neutral900} />
+        </Pressable>
       </View>
       <View style={{ flexDirection: 'row', paddingHorizontal: 24, paddingBottom: 16, gap: 8 }}>
         <Pressable onPress={() => setTab('money')} style={{ paddingVertical: 8, paddingHorizontal: 16, borderRadius: 18, backgroundColor: tab === 'money' ? colors.neutral900 : colors.neutral50 }}>

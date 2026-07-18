@@ -1,8 +1,8 @@
-import { Feather } from '@expo/vector-icons';
+import Feather from 'react-native-vector-icons/Feather';
 
 // Maps the Tabler icon names used in the design spec to the closest Feather icon
-// (Feather ships free with @expo/vector-icons, no extra asset bundling required)
-const ICON_MAP: Record<string, keyof typeof Feather.glyphMap> = {
+// (Feather ships with react-native-vector-icons; fonts linked via fonts.gradle)
+const ICON_MAP: Record<string, string> = {
   'ti-tools-kitchen-2': 'coffee',
   'ti-car': 'truck',
   'ti-shopping-bag': 'shopping-bag',
@@ -31,7 +31,7 @@ const ICON_MAP: Record<string, keyof typeof Feather.glyphMap> = {
   'ti-checklist': 'check-square',
 };
 
-export function mapIcon(tablerName: string): keyof typeof Feather.glyphMap {
+export function mapIcon(tablerName: string): string {
   return ICON_MAP[tablerName] ?? 'circle';
 }
 

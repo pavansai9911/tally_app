@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, SafeAreaView, ScrollView, Pressable } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { mapIcon } from '@/utils/iconMap';
@@ -33,10 +33,10 @@ export default function CategoryDrilldownScreen({ navigation, route }: Props) {
     })();
   }, [categoryId, mk]);
 
-  if (!category) return <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} />;
+  if (!category) return <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }} />;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }}>
       <View style={{ paddingHorizontal: 20, paddingTop: 8 }}>
         <Pressable onPress={() => navigation.goBack()}><Feather name="chevron-left" size={24} color={colors.neutral900} /></Pressable>
       </View>

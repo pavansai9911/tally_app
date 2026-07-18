@@ -1,4 +1,4 @@
-import { getDb, genId } from './database';
+import { getDb, genId, buildUpdate } from './database';
 
 export interface Category {
   id: string;
@@ -32,10 +32,9 @@ export async function createCategory(input: Omit<Category, 'id' | 'archived'>): 
 
 export async function updateCategory(id: string, input: Partial<Category>): Promise<void> {
   const db = await getDb();
-  const fields = Object.keys(input);
-  if (fields.length === 0) return;
-  const setClause = fields.map(f => `${f} = ?`).join(', ');
-  await db.runAsync(`UPDATE categories SET ${setClause} WHERE id = ?`, [...fields.map(f => (input as any)[f]), id]);
+  const { clause, values } = buildUpdate<Category>(input, ['name', 'type', 'icon', 'color', 'archived']);
+  if (!clause) return;
+  await db.runAsync(`UPDATE categories SET ${clause} WHERE id = ?`, [...values, id]);
 }
 
 export async function deleteCategory(id: string): Promise<void> {
@@ -96,10 +95,11 @@ export async function createBudget(input: Omit<Budget, 'id'>): Promise<string> {
 
 export async function updateBudget(id: string, input: Partial<Budget>): Promise<void> {
   const db = await getDb();
-  const fields = Object.keys(input);
-  if (fields.length === 0) return;
-  const setClause = fields.map(f => `${f} = ?`).join(', ');
-  await db.runAsync(`UPDATE budgets SET ${setClause} WHERE id = ?`, [...fields.map(f => (input as any)[f]), id]);
+  const { clause, values } = buildUpdate<Budget>(input, [
+    'category_id', 'monthly_limit', 'recurrence', 'alert_near_limit', 'alert_threshold_pct',
+  ]);
+  if (!clause) return;
+  await db.runAsync(`UPDATE budgets SET ${clause} WHERE id = ?`, [...values, id]);
 }
 
 export async function deleteBudget(id: string): Promise<void> {
@@ -142,10 +142,11 @@ export async function createRecurringRule(input: Omit<RecurringRule, 'id' | 'act
 
 export async function updateRecurringRule(id: string, input: Partial<RecurringRule>): Promise<void> {
   const db = await getDb();
-  const fields = Object.keys(input);
-  if (fields.length === 0) return;
-  const setClause = fields.map(f => `${f} = ?`).join(', ');
-  await db.runAsync(`UPDATE recurring_rules SET ${setClause} WHERE id = ?`, [...fields.map(f => (input as any)[f]), id]);
+  const { clause, values } = buildUpdate<RecurringRule>(input, [
+    'type', 'name', 'amount', 'category_id', 'account_id', 'frequency', 'next_date', 'auto_add', 'active',
+  ]);
+  if (!clause) return;
+  await db.runAsync(`UPDATE recurring_rules SET ${clause} WHERE id = ?`, [...values, id]);
 }
 
 export async function deleteRecurringRule(id: string): Promise<void> {

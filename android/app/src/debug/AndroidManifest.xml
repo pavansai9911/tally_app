@@ -1,0 +1,5 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Debug-only: lets the Metro dev server load the JS bundle over the local network.
+         Release builds ship with no INTERNET permission (Tally is fully offline). -->
+    <uses-permission android:name="android.permission.INTERNET" />
+</manifest>

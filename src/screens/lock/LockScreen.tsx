@@ -1,43 +1,53 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Pressable, SafeAreaView } from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import * as LocalAuthentication from 'expo-local-authentication';
-import { getSetting } from '@/db';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { View, Text, Pressable, SafeAreaView, Alert } from 'react-native';
+import Feather from 'react-native-vector-icons/Feather';
 import { lockColors } from '@/theme/colors';
+import { haptic } from '@/utils/haptics';
+import {
+  verifyPin,
+  clearPin,
+  isBiometricAvailable,
+  isBiometricEnabled,
+  authenticateBiometric,
+} from '@/services/lock';
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_SECONDS = 60;
+const PIN_LENGTH = 4;
 
 type LockState = 'entry' | 'wrong' | 'lockout';
 
 export default function LockScreen({ onUnlock }: { onUnlock: () => void }) {
   const [pin, setPin] = useState('');
-  const [storedPin, setStoredPin] = useState<string | null>(null);
   const [state, setState] = useState<LockState>('entry');
   const [attemptsLeft, setAttemptsLeft] = useState(MAX_ATTEMPTS);
   const [countdown, setCountdown] = useState(LOCKOUT_SECONDS);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const tryBiometric = useCallback(async () => {
+    const ok = await authenticateBiometric('Unlock Tally');
+    if (ok) {
+      haptic('notificationSuccess');
+      onUnlock();
+    }
+  }, [onUnlock]);
+
   useEffect(() => {
     (async () => {
-      const p = await getSetting('app_pin');
-      setStoredPin(p);
-      const biometricEnabled = await getSetting('biometric_enabled');
-      if (biometricEnabled === '1') {
-        const hasHardware = await LocalAuthentication.hasHardwareAsync();
-        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-        setBiometricAvailable(hasHardware && isEnrolled);
-        if (hasHardware && isEnrolled) tryBiometric();
-      }
+      const enabled = await isBiometricEnabled();
+      const available = await isBiometricAvailable();
+      const show = enabled && available;
+      setBiometricAvailable(show);
+      if (show) tryBiometric();
     })();
-  }, []);
+  }, [tryBiometric]);
 
   useEffect(() => {
     if (state === 'lockout') {
       setCountdown(LOCKOUT_SECONDS);
       intervalRef.current = setInterval(() => {
-        setCountdown(prev => {
+        setCountdown((prev) => {
           if (prev <= 1) {
             if (intervalRef.current) clearInterval(intervalRef.current);
             setState('entry');
@@ -47,50 +57,63 @@ export default function LockScreen({ onUnlock }: { onUnlock: () => void }) {
           return prev - 1;
         });
       }, 1000);
-      return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+      return () => {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+      };
     }
   }, [state]);
 
-  async function tryBiometric() {
-    const result = await LocalAuthentication.authenticateAsync({ promptMessage: 'Unlock Tally' });
-    if (result.success) onUnlock();
+  async function checkPin(entered: string) {
+    const ok = await verifyPin(entered);
+    if (ok) {
+      haptic('notificationSuccess');
+      onUnlock();
+      return;
+    }
+    haptic('notificationError');
+    const remaining = attemptsLeft - 1;
+    setAttemptsLeft(remaining);
+    setPin('');
+    setState(remaining <= 0 ? 'lockout' : 'wrong');
   }
 
   function handleDigit(d: string) {
     if (state === 'lockout') return;
     const next = pin + d;
-    if (next.length <= 4) {
+    if (next.length <= PIN_LENGTH) {
+      haptic('selection');
       setPin(next);
-      if (next.length === 4) {
-        setTimeout(() => checkPin(next), 150);
+      if (next.length === PIN_LENGTH) {
+        setTimeout(() => checkPin(next), 120);
       }
     }
   }
 
-  function checkPin(entered: string) {
-    // If no PIN was ever set (e.g. only biometric chosen), accept any 4-digit entry as a no-op pass-through
-    // to avoid locking the user out entirely in a zero-budget offline-only flow.
-    if (!storedPin || entered === storedPin) {
-      onUnlock();
-      return;
-    }
-    const remaining = attemptsLeft - 1;
-    setAttemptsLeft(remaining);
-    setPin('');
-    if (remaining <= 0) {
-      setState('lockout');
-    } else {
-      setState('wrong');
-    }
-  }
-
   function handleBackspace() {
-    setPin(prev => prev.slice(0, -1));
+    setPin((prev) => prev.slice(0, -1));
     if (state === 'wrong') setState('entry');
   }
 
+  function handleForgotPin() {
+    Alert.alert(
+      'Reset app lock?',
+      'If you forgot your PIN you can turn off the app lock. Your data stays safe on this device — nothing is deleted. You can set a new PIN later in Settings.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Turn off lock',
+          style: 'destructive',
+          onPress: async () => {
+            await clearPin();
+            onUnlock();
+          },
+        },
+      ],
+    );
+  }
+
   const dotColor = state === 'wrong' ? lockColors.expense : lockColors.accent;
-  const filledCount = state === 'wrong' ? 4 : pin.length;
+  const filledCount = state === 'wrong' ? PIN_LENGTH : pin.length;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: lockColors.background }}>
@@ -117,7 +140,7 @@ export default function LockScreen({ onUnlock }: { onUnlock: () => void }) {
           <>
             <Text style={{ fontSize: 17, fontWeight: '600', color: '#FFFFFF', marginBottom: 16 }}>Enter your PIN</Text>
             <View style={{ flexDirection: 'row', gap: 14, marginBottom: state === 'wrong' ? 10 : 36 }}>
-              {[0, 1, 2, 3].map(i => (
+              {[0, 1, 2, 3].map((i) => (
                 <View
                   key={i}
                   style={{
@@ -136,27 +159,25 @@ export default function LockScreen({ onUnlock }: { onUnlock: () => void }) {
             )}
 
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', width: 280, justifyContent: 'space-between' }}>
-              {['1','2','3','4','5','6','7','8','9'].map(d => (
+              {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((d) => (
                 <KeypadButton key={d} label={d} onPress={() => handleDigit(d)} />
               ))}
               {biometricAvailable ? (
-                <Pressable onPress={tryBiometric} style={{ width: 80, height: 80, alignItems: 'center', justifyContent: 'center' }}>
+                <Pressable onPress={tryBiometric} accessibilityLabel="Unlock with biometrics" style={{ width: 80, height: 80, alignItems: 'center', justifyContent: 'center' }}>
                   <Feather name="unlock" size={24} color={lockColors.accent} />
                 </Pressable>
               ) : (
                 <View style={{ width: 80, height: 80 }} />
               )}
               <KeypadButton label="0" onPress={() => handleDigit('0')} />
-              <Pressable onPress={handleBackspace} style={{ width: 80, height: 80, alignItems: 'center', justifyContent: 'center' }}>
+              <Pressable onPress={handleBackspace} accessibilityLabel="Delete" style={{ width: 80, height: 80, alignItems: 'center', justifyContent: 'center' }}>
                 <Feather name="delete" size={22} color={lockColors.textSecondary} />
               </Pressable>
             </View>
 
-            {state === 'wrong' && (
-              <Pressable onPress={() => { /* recovery flow placeholder */ }}>
-                <Text style={{ fontSize: 13, color: lockColors.accent, fontWeight: '700', marginTop: 28 }}>Forgot PIN?</Text>
-              </Pressable>
-            )}
+            <Pressable onPress={handleForgotPin} hitSlop={8}>
+              <Text style={{ fontSize: 13, color: lockColors.accent, fontWeight: '700', marginTop: 28 }}>Forgot PIN?</Text>
+            </Pressable>
           </>
         )}
       </View>
@@ -168,6 +189,7 @@ function KeypadButton({ label, onPress }: { label: string; onPress: () => void }
   return (
     <Pressable
       onPress={onPress}
+      accessibilityLabel={`Digit ${label}`}
       style={({ pressed }) => ({
         width: 80, height: 80, borderRadius: 40, backgroundColor: lockColors.keypadButton,
         alignItems: 'center', justifyContent: 'center', marginBottom: 18,

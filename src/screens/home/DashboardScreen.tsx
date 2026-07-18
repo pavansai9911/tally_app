@@ -1,13 +1,13 @@
 import React, { useCallback, useState } from 'react';
 import { View, Text, SafeAreaView, ScrollView, Pressable } from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import { useFocusEffect, useNavigation, CompositeNavigationProp } from '@react-navigation/native';
+import Feather from 'react-native-vector-icons/Feather';
+import { useFocusEffect, useNavigation, CompositeNavigationProp, ParamListBase } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { ProgressBar } from '@/components/ui';
 import { mapIcon } from '@/utils/iconMap';
-import { formatCurrency, formatDateLabel, monthKey, todayKey } from '@/utils/format';
+import { formatCurrency, monthKey, todayKey, formatWeekdayLong } from '@/utils/format';
 import {
   getMonthSummary, getTotalBalance, listBudgetsWithSpend, listTransactions,
   getTodayHabitsWithStatus, upsertLog, deleteLog,
@@ -15,7 +15,7 @@ import {
 } from '@/db';
 import { RootStackParamList } from '@/navigation/RootNavigator';
 
-type Nav = CompositeNavigationProp<BottomTabNavigationProp<any>, NativeStackNavigationProp<RootStackParamList>>;
+type Nav = CompositeNavigationProp<BottomTabNavigationProp<ParamListBase>, NativeStackNavigationProp<RootStackParamList>>;
 
 export default function DashboardScreen() {
   const navigation = useNavigation<Nav>();
@@ -50,7 +50,7 @@ export default function DashboardScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.neutral50 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 12, paddingBottom: 16 }}>
         <View>
-          <Text style={{ ...typography.bodySmall, color: colors.neutral500 }}>{new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
+          <Text style={{ ...typography.bodySmall, color: colors.neutral500 }}>{formatWeekdayLong()}</Text>
           <Text style={{ ...typography.h1, color: colors.neutral900 }}>{greeting}</Text>
         </View>
         <Pressable onPress={() => navigation.navigate('Settings')} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.neutral900, alignItems: 'center', justifyContent: 'center' }}>
@@ -72,11 +72,11 @@ export default function DashboardScreen() {
         </View>
 
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
-          <Pressable onPress={() => navigation.navigate('Money', { screen: 'AddEditTransaction' })} style={{ flex: 1, height: 44, backgroundColor: '#FFFFFF', borderWidth: 0.5, borderColor: colors.surfaceBorder, borderRadius: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          <Pressable onPress={() => navigation.navigate('Money', { screen: 'AddEditTransaction' })} style={{ flex: 1, height: 44, backgroundColor: colors.surfaceCard, borderWidth: 0.5, borderColor: colors.surfaceBorder, borderRadius: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
             <Feather name="plus" size={16} color={colors.accent500} />
             <Text style={{ ...typography.bodySmallMedium, color: colors.neutral900 }}>Transaction</Text>
           </Pressable>
-          <Pressable onPress={() => navigation.navigate('Habits', { screen: 'HabitList' })} style={{ flex: 1, height: 44, backgroundColor: '#FFFFFF', borderWidth: 0.5, borderColor: colors.surfaceBorder, borderRadius: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          <Pressable onPress={() => navigation.navigate('Habits', { screen: 'HabitList' })} style={{ flex: 1, height: 44, backgroundColor: colors.surfaceCard, borderWidth: 0.5, borderColor: colors.surfaceBorder, borderRadius: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
             <Feather name="check-square" size={16} color={colors.income} />
             <Text style={{ ...typography.bodySmallMedium, color: colors.neutral900 }}>Check-in</Text>
           </Pressable>
@@ -86,7 +86,7 @@ export default function DashboardScreen() {
         {budgets.length === 0 ? (
           <EmptyCard icon="pie-chart" title="No budgets yet" subtitle="Set spending limits to see progress here" />
         ) : (
-          <View style={{ backgroundColor: '#FFFFFF', borderRadius: radius.lg, padding: 16, marginBottom: 18 }}>
+          <View style={{ backgroundColor: colors.surfaceCard, borderRadius: radius.lg, padding: 16, marginBottom: 18 }}>
             {budgets.map((b, i) => {
               const pct = b.spent / b.monthly_limit;
               return (
@@ -106,7 +106,7 @@ export default function DashboardScreen() {
         {habits.length === 0 ? (
           <EmptyCard icon="check-square" title="No habits scheduled today" subtitle="Add a habit to start building streaks" />
         ) : (
-          <View style={{ backgroundColor: '#FFFFFF', borderRadius: radius.lg, paddingHorizontal: 16, marginBottom: 18 }}>
+          <View style={{ backgroundColor: colors.surfaceCard, borderRadius: radius.lg, paddingHorizontal: 16, marginBottom: 18 }}>
             {habits.map((h, i) => {
               const done = h.log?.status === 'done';
               return (
@@ -129,7 +129,7 @@ export default function DashboardScreen() {
         {recentTx.length === 0 ? (
           <EmptyCard icon="file-text" title="No transactions yet" subtitle="Your recent activity will show up here" />
         ) : (
-          <View style={{ backgroundColor: '#FFFFFF', borderRadius: radius.lg, paddingHorizontal: 16 }}>
+          <View style={{ backgroundColor: colors.surfaceCard, borderRadius: radius.lg, paddingHorizontal: 16 }}>
             {recentTx.map((t, i) => (
               <View key={t.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderBottomWidth: i === recentTx.length - 1 ? 0 : 0.5, borderBottomColor: colors.surfaceBorder }}>
                 <View style={{ width: 30, height: 30, borderRadius: 9, backgroundColor: (t.category_color ?? colors.neutral400) + '22', alignItems: 'center', justifyContent: 'center' }}>
@@ -148,7 +148,7 @@ export default function DashboardScreen() {
   );
 }
 
-function MiniStat({ label, value, icon, bg, fg }: { label: string; value: string; icon: keyof typeof Feather.glyphMap; bg: string; fg: string }) {
+function MiniStat({ label, value, icon, bg, fg }: { label: string; value: string; icon: string; bg: string; fg: string }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
       <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
@@ -172,10 +172,10 @@ function SectionHeader({ title, onPress }: { title: string; onPress: () => void 
   );
 }
 
-function EmptyCard({ icon, title, subtitle }: { icon: keyof typeof Feather.glyphMap; title: string; subtitle: string }) {
+function EmptyCard({ icon, title, subtitle }: { icon: string; title: string; subtitle: string }) {
   const { colors, typography, radius } = useTheme();
   return (
-    <View style={{ backgroundColor: '#FFFFFF', borderRadius: radius.xl, padding: 24, alignItems: 'center', marginBottom: 18 }}>
+    <View style={{ backgroundColor: colors.surfaceCard, borderRadius: radius.xl, padding: 24, alignItems: 'center', marginBottom: 18 }}>
       <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: colors.neutral50, alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
         <Feather name={icon} size={24} color={colors.neutral400} />
       </View>

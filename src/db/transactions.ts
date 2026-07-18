@@ -1,4 +1,4 @@
-import { getDb, genId } from './database';
+import { getDb, genId, buildUpdate } from './database';
 
 export interface Transaction {
   id: string;
@@ -58,12 +58,13 @@ export async function createTransaction(input: Omit<Transaction, 'id'>): Promise
 
 export async function updateTransaction(id: string, input: Partial<Transaction>): Promise<void> {
   const db = await getDb();
-  const fields = Object.keys(input);
-  if (fields.length === 0) return;
-  const setClause = fields.map(f => `${f} = ?`).join(', ');
+  const { clause, values } = buildUpdate<Transaction>(input, [
+    'type', 'amount', 'account_id', 'to_account_id', 'category_id', 'note', 'occurred_at', 'recurring_id',
+  ]);
+  if (!clause) return;
   await db.runAsync(
-    `UPDATE transactions SET ${setClause}, updated_at = datetime('now') WHERE id = ?`,
-    [...fields.map(f => (input as any)[f]), id]
+    `UPDATE transactions SET ${clause}, updated_at = datetime('now') WHERE id = ?`,
+    [...values, id]
   );
 }
 
