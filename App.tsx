@@ -70,10 +70,13 @@ function AppInner() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.neutral0 }}>
+      {/* Not translucent: on Android a translucent status bar makes screen content draw
+          underneath the clock/icons (the dashboard header was being overlapped). Giving the
+          status bar its own space keeps every screen's header clear. */}
       <StatusBar
         barStyle={isDark ? 'light-content' : 'dark-content'}
-        backgroundColor="transparent"
-        translucent
+        backgroundColor={colors.neutral0}
+        translucent={false}
       />
       {phase === 'onboarding' && <OnboardingNavigator onComplete={() => setPhase('unlocked')} />}
       {phase === 'locked' && <LockScreen onUnlock={() => setPhase('unlocked')} />}
