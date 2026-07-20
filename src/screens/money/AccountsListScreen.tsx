@@ -12,7 +12,7 @@ import { MoneyStackParamList } from '@/navigation/RootNavigator';
 type Props = NativeStackScreenProps<MoneyStackParamList, 'AccountsList'>;
 
 export default function AccountsListScreen({ navigation }: Props) {
-  const { colors, typography, radius } = useTheme();
+  const { colors, typography, radius, isDark } = useTheme();
   const [accounts, setAccounts] = useState<AccountWithBalance[]>([]);
 
   useFocusEffect(useCallback(() => { listAccounts().then(setAccounts); }, []));
@@ -30,7 +30,7 @@ export default function AccountsListScreen({ navigation }: Props) {
       </View>
 
       <View style={{ paddingHorizontal: 24, paddingBottom: 20 }}>
-        <View style={{ backgroundColor: colors.neutral900, borderRadius: radius.xl, padding: 20 }}>
+        <View style={{ backgroundColor: isDark ? colors.neutral200 : colors.neutral900, borderRadius: radius.xl, padding: 20 }}>
           <Text style={{ ...typography.caption, color: colors.neutral400, textTransform: 'uppercase' }}>Total balance</Text>
           <Text style={{ fontSize: 28, fontWeight: '700', color: '#FFFFFF', marginTop: 6 }}>{formatCurrency(total)}</Text>
         </View>

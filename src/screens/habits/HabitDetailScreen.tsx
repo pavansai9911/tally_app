@@ -126,11 +126,11 @@ export default function HabitDetailScreen({ navigation, route }: Props) {
 }
 
 function StatTile({ icon, value, label, bg, color }: { icon: string; value: string; label: string; bg: string; color: string }) {
-  const { typography, radius } = useTheme();
+  const { colors, typography, radius } = useTheme();
   return (
     <View style={{ flex: 1, padding: 14, backgroundColor: bg, borderRadius: radius.lg, alignItems: 'center' }}>
       <Feather name={icon} size={18} color={color} />
-      <Text style={{ ...typography.h3, color: '#13161A', marginTop: 6 }}>{value}</Text>
+      <Text style={{ ...typography.h3, color: colors.neutral900, marginTop: 6 }}>{value}</Text>
       <Text style={{ fontSize: 11, color, fontWeight: '600', textTransform: 'uppercase', marginTop: 2 }}>{label}</Text>
     </View>
   );

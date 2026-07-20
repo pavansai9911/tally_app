@@ -44,4 +44,7 @@ export const HABIT_ICON_OPTIONS = [
   'ti-run', 'ti-moon', 'ti-glass-full', 'ti-book', 'ti-smoking-no', 'ti-checklist',
 ];
 
-export const CATEGORY_COLOR_OPTIONS = ['#E0473F', '#3D5AFE', '#1A9E6B', '#C98A1B', '#6B7280', '#9AA1A9'];
+export const CATEGORY_COLOR_OPTIONS = [
+  '#E0473F', '#F2711C', '#C98A1B', '#1A9E6B', '#149C8E', '#3D5AFE',
+  '#5B79FF', '#7C4DFF', '#D6336C', '#6B7280', '#4B5159', '#9AA1A9',
+];

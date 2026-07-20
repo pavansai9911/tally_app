@@ -66,10 +66,10 @@ export default function HabitListScreen({ navigation }: Props) {
 
       <View style={{ flexDirection: 'row', paddingHorizontal: 24, paddingBottom: 14, gap: 8 }}>
         <Pressable onPress={() => setTab('today')} style={{ paddingVertical: 8, paddingHorizontal: 16, borderRadius: 18, backgroundColor: tab === 'today' ? colors.neutral900 : colors.neutral50 }}>
-          <Text style={{ ...typography.bodySmallMedium, color: tab === 'today' ? '#FFFFFF' : colors.neutral600 }}>Today</Text>
+          <Text style={{ ...typography.bodySmallMedium, color: tab === 'today' ? colors.neutral0 : colors.neutral600 }}>Today</Text>
         </Pressable>
         <Pressable onPress={() => setTab('all')} style={{ paddingVertical: 8, paddingHorizontal: 16, borderRadius: 18, backgroundColor: tab === 'all' ? colors.neutral900 : colors.neutral50 }}>
-          <Text style={{ ...typography.bodySmallMedium, color: tab === 'all' ? '#FFFFFF' : colors.neutral600 }}>All habits</Text>
+          <Text style={{ ...typography.bodySmallMedium, color: tab === 'all' ? colors.neutral0 : colors.neutral600 }}>All habits</Text>
         </Pressable>
       </View>
 
@@ -193,11 +193,11 @@ export default function HabitListScreen({ navigation }: Props) {
 }
 
 function SheetButton({ label, icon, color, bg, onPress }: { label: string; icon: string; color: string; bg: string; onPress: () => void }) {
-  const { typography, radius } = useTheme();
+  const { colors, typography, radius } = useTheme();
   return (
     <Pressable onPress={onPress} style={{ height: 50, backgroundColor: bg, borderRadius: radius.lg, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, gap: 12, marginBottom: 8 }}>
       <Feather name={icon} size={18} color={color} />
-      <Text style={{ ...typography.bodySmallMedium, color: '#13161A' }}>{label}</Text>
+      <Text style={{ ...typography.bodySmallMedium, color: colors.neutral900 }}>{label}</Text>
     </Pressable>
   );
 }

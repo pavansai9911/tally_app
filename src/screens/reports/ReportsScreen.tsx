@@ -105,10 +105,10 @@ export default function ReportsScreen({ navigation }: Props) {
       </View>
       <View style={{ flexDirection: 'row', paddingHorizontal: 24, paddingBottom: 16, gap: 8 }}>
         <Pressable onPress={() => setTab('money')} style={{ paddingVertical: 8, paddingHorizontal: 16, borderRadius: 18, backgroundColor: tab === 'money' ? colors.neutral900 : colors.neutral50 }}>
-          <Text style={{ ...typography.bodySmallMedium, color: tab === 'money' ? '#FFFFFF' : colors.neutral600 }}>Money</Text>
+          <Text style={{ ...typography.bodySmallMedium, color: tab === 'money' ? colors.neutral0 : colors.neutral600 }}>Money</Text>
         </Pressable>
         <Pressable onPress={() => setTab('habits')} style={{ paddingVertical: 8, paddingHorizontal: 16, borderRadius: 18, backgroundColor: tab === 'habits' ? colors.neutral900 : colors.neutral50 }}>
-          <Text style={{ ...typography.bodySmallMedium, color: tab === 'habits' ? '#FFFFFF' : colors.neutral600 }}>Habits</Text>
+          <Text style={{ ...typography.bodySmallMedium, color: tab === 'habits' ? colors.neutral0 : colors.neutral600 }}>Habits</Text>
         </Pressable>
       </View>
 
@@ -133,6 +133,10 @@ export default function ReportsScreen({ navigation }: Props) {
                   data={breakdown.map(b => ({ value: b.total, color: b.category_color }))}
                   centerLabel="Total"
                   centerValue={formatCurrency(breakdown.reduce((s, b) => s + b.total, 0))}
+                  onSlicePress={(i) => {
+                    const b = breakdown[i];
+                    if (b) navigation.navigate('CategoryDrilldown', { categoryId: b.category_id, monthKey: monthKey() });
+                  }}
                 />
                 <View style={{ flex: 1, gap: 9 }}>
                   {breakdown.slice(0, 4).map(b => {
@@ -209,11 +213,11 @@ export default function ReportsScreen({ navigation }: Props) {
 }
 
 function SummaryTile({ label, value, bg, fg }: { label: string; value: string; bg: string; fg: string }) {
-  const { typography, radius } = useTheme();
+  const { colors, typography, radius } = useTheme();
   return (
     <View style={{ flex: 1, padding: 14, backgroundColor: bg, borderRadius: radius.lg }}>
       <Text style={{ fontSize: 11, fontWeight: '600', color: fg, textTransform: 'uppercase' }}>{label}</Text>
-      <Text style={{ ...typography.amountMedium, color: '#13161A', marginTop: 4 }}>{value}</Text>
+      <Text style={{ ...typography.amountMedium, color: colors.neutral900, marginTop: 4 }}>{value}</Text>
     </View>
   );
 }

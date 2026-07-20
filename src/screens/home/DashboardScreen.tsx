@@ -19,7 +19,7 @@ type Nav = CompositeNavigationProp<BottomTabNavigationProp<ParamListBase>, Nativ
 
 export default function DashboardScreen() {
   const navigation = useNavigation<Nav>();
-  const { colors, typography, radius } = useTheme();
+  const { colors, typography, radius, isDark } = useTheme();
   const [summary, setSummary] = useState<MonthSummary>({ income: 0, expense: 0, net: 0 });
   const [totalBalance, setTotalBalance] = useState(0);
   const [budgets, setBudgets] = useState<BudgetWithSpend[]>([]);
@@ -53,23 +53,29 @@ export default function DashboardScreen() {
           <Text style={{ ...typography.bodySmall, color: colors.neutral500 }}>{formatWeekdayLong()}</Text>
           <Text style={{ ...typography.h1, color: colors.neutral900 }}>{greeting}</Text>
         </View>
-        <Pressable onPress={() => navigation.navigate('Settings')} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: colors.neutral900, alignItems: 'center', justifyContent: 'center' }}>
+        <Pressable onPress={() => navigation.navigate('Settings')} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: isDark ? colors.surfaceCard : colors.neutral900, alignItems: 'center', justifyContent: 'center' }}>
           <Feather name="settings" size={18} color="#FFFFFF" />
         </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
-        <View style={{ backgroundColor: colors.neutral900, borderRadius: radius.xl, padding: 20, marginBottom: 16 }}>
-          <Text style={{ ...typography.caption, color: colors.neutral400, textTransform: 'uppercase' }}>Total balance</Text>
+        <Pressable
+          onPress={() => navigation.navigate('Money', { screen: 'AccountsList' })}
+          style={{ backgroundColor: isDark ? colors.neutral200 : colors.neutral900, borderRadius: radius.xl, padding: 20, marginBottom: 16 }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={{ ...typography.caption, color: colors.neutral400, textTransform: 'uppercase' }}>Total balance</Text>
+            <Feather name="chevron-right" size={16} color={colors.neutral400} />
+          </View>
           <Text style={{ fontSize: 28, fontWeight: '700', color: '#FFFFFF', marginTop: 6, marginBottom: isEmpty ? 0 : 16 }}>{formatCurrency(totalBalance)}</Text>
           {!isEmpty && (
-            <View style={{ flexDirection: 'row', gap: 20 }}>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
               <MiniStat label="Income" value={formatCurrency(summary.income)} icon="arrow-down-left" bg="#13301F" fg={colors.income} />
               <MiniStat label="Expense" value={formatCurrency(summary.expense)} icon="arrow-up-right" bg="#3A1816" fg={colors.expense} />
               <MiniStat label="Net" value={`${summary.net >= 0 ? '+' : ''}${formatCurrency(summary.net)}`} icon="trending-up" bg="#1B2040" fg="#5B79FF" />
             </View>
           )}
-        </View>
+        </Pressable>
 
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
           <Pressable onPress={() => navigation.navigate('Money', { screen: 'AddEditTransaction' })} style={{ flex: 1, height: 44, backgroundColor: colors.surfaceCard, borderWidth: 0.5, borderColor: colors.surfaceBorder, borderRadius: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
@@ -90,13 +96,17 @@ export default function DashboardScreen() {
             {budgets.map((b, i) => {
               const pct = b.spent / b.monthly_limit;
               return (
-                <View key={b.id} style={{ marginBottom: i === budgets.length - 1 ? 0 : 14 }}>
+                <Pressable
+                  key={b.id}
+                  onPress={() => navigation.navigate('Money', { screen: 'BudgetDetail', params: { id: b.id } })}
+                  style={{ marginBottom: i === budgets.length - 1 ? 0 : 14 }}
+                >
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
                     <Text style={{ ...typography.bodySmallMedium, color: colors.neutral900 }}>{b.category_name}</Text>
                     <Text style={{ ...typography.caption, color: pct >= 1 ? colors.expense : colors.neutral500 }}>{formatCurrency(b.spent)} / {formatCurrency(b.monthly_limit)}</Text>
                   </View>
                   <ProgressBar progress={Math.min(1, pct)} color={pct >= 1 ? colors.expense : colors.accent500} />
-                </View>
+                </Pressable>
               );
             })}
           </View>
@@ -150,13 +160,13 @@ export default function DashboardScreen() {
 
 function MiniStat({ label, value, icon, bg, fg }: { label: string; value: string; icon: string; bg: string; fg: string }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+    <View style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
       <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
         <Feather name={icon} size={14} color={fg} />
       </View>
-      <View>
-        <Text style={{ fontSize: 10, color: '#8A93A0' }}>{label}</Text>
-        <Text style={{ fontSize: 13, fontWeight: '600', color: '#FFFFFF' }}>{value}</Text>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={{ fontSize: 10, color: '#8A93A0' }} numberOfLines={1}>{label}</Text>
+        <Text style={{ fontSize: 13, fontWeight: '600', color: '#FFFFFF' }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{value}</Text>
       </View>
     </View>
   );

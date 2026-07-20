@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, SafeAreaView, ScrollView, Pressable, Alert } from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, Pressable } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -8,6 +8,7 @@ import { ToggleSwitch } from '@/components/ui';
 import {
   isPinSet, clearPin, isBiometricAvailable, isBiometricEnabled, setBiometricEnabled,
 } from '@/services/lock';
+import VerifyPinScreen from '@/screens/lock/VerifyPinScreen';
 import { RootStackParamList } from '@/navigation/RootNavigator';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
@@ -19,6 +20,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const [lockEnabled, setLockEnabled] = useState(false);
   const [biometricOn, setBiometricOn] = useState(false);
   const [biometricHardware, setBiometricHardware] = useState(false);
+  const [pendingDisable, setPendingDisable] = useState(false);
 
   const reload = useCallback(() => {
     (async () => {
@@ -38,24 +40,30 @@ export default function SettingsScreen({ navigation }: Props) {
         navigation.navigate('SettingsSub', { section: 'pin' });
       }
     } else {
-      Alert.alert('Turn off app lock?', 'Your PIN will be removed. Your data stays on this device.', [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Turn off',
-          style: 'destructive',
-          onPress: async () => {
-            await clearPin();
-            setLockEnabled(false);
-            setBiometricOn(false);
-          },
-        },
-      ]);
+      // Removing the lock is sensitive — require the current PIN first.
+      setPendingDisable(true);
     }
   }
 
   async function toggleBiometric(v: boolean) {
     setBiometricOn(v);
     await setBiometricEnabled(v);
+  }
+
+  if (pendingDisable) {
+    return (
+      <VerifyPinScreen
+        title="Enter PIN to turn off lock"
+        subtitle="Confirm your PIN to disable the app lock"
+        onCancel={() => setPendingDisable(false)}
+        onSuccess={async () => {
+          await clearPin();
+          setLockEnabled(false);
+          setBiometricOn(false);
+          setPendingDisable(false);
+        }}
+      />
+    );
   }
 
   return (
