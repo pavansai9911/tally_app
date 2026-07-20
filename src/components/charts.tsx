@@ -15,13 +15,14 @@ function describeArc(cx: number, cy: number, r: number, startAngle: number, endA
 }
 
 export function DonutChart({
-  data, size = 140, strokeWidth = 22, centerLabel, centerValue,
+  data, size = 140, strokeWidth = 22, centerLabel, centerValue, onSlicePress,
 }: {
   data: Array<{ value: number; color: string }>;
   size?: number;
   strokeWidth?: number;
   centerLabel?: string;
   centerValue?: string;
+  onSlicePress?: (index: number) => void;
 }) {
   const { colors, typography } = useTheme();
   const total = data.reduce((s, d) => s + d.value, 0) || 1;
@@ -42,7 +43,15 @@ export function DonutChart({
     <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
       <Circle cx={cx} cy={cy} r={r} stroke={colors.neutral100} strokeWidth={strokeWidth} fill="none" />
       {arcs.map(a => (
-        <Path key={a.key} d={a.path} stroke={a.color} strokeWidth={strokeWidth} fill="none" strokeLinecap="butt" />
+        <Path
+          key={a.key}
+          d={a.path}
+          stroke={a.color}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeLinecap="butt"
+          onPress={onSlicePress ? () => onSlicePress(a.key) : undefined}
+        />
       ))}
       {centerValue && (
         <>

@@ -4,8 +4,8 @@ import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Button } from '@/components/ui';
-import { listAccounts, listCategories, AccountWithBalance, Category } from '@/db';
-import { mapIcon } from '@/utils/iconMap';
+import { listAccounts, listCategories, updateCategory, AccountWithBalance, Category } from '@/db';
+import { mapIcon, CATEGORY_COLOR_OPTIONS } from '@/utils/iconMap';
 import { formatCurrency } from '@/utils/format';
 import { exportBackup, exportTransactionsCsv, importBackupInteractive } from '@/services/backup';
 import { rescheduleAllHabitReminders } from '@/services/notifications';
@@ -25,6 +25,7 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [pinStage, setPinStage] = useState<'checking' | 'verify' | 'set'>('checking');
+  const [expandedCat, setExpandedCat] = useState<string | null>(null);
 
   useEffect(() => {
     if (section === 'accounts') listAccounts().then(setAccounts);
@@ -32,6 +33,11 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
     // When changing the PIN: verify the current one first (if one exists).
     if (section === 'pin') isPinSet().then((set) => setPinStage(set ? 'verify' : 'set'));
   }, [section]);
+
+  async function changeCategoryColor(id: string, color: string) {
+    await updateCategory(id, { color });
+    setCategories(await listCategories());
+  }
 
   const titles: Record<string, string> = {
     theme: 'Theme', pin: 'App PIN', accounts: 'Manage accounts',
@@ -136,15 +142,42 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
           </View>
         ))}
 
-        {section === 'categories' && categories.map((c) => (
-          <View key={c.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 0.5, borderBottomColor: colors.surfaceBorder }}>
-            <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: c.color + '22', alignItems: 'center', justifyContent: 'center' }}>
-              <Feather name={mapIcon(c.icon)} size={16} color={c.color} />
-            </View>
-            <Text style={{ flex: 1, ...typography.bodyMedium, color: colors.neutral900 }}>{c.name}</Text>
-            <Text style={{ ...typography.caption, color: colors.neutral400, textTransform: 'capitalize' }}>{c.type}</Text>
-          </View>
-        ))}
+        {section === 'categories' && (
+          <>
+            <Text style={{ ...typography.bodySmall, color: colors.neutral500, marginBottom: 12 }}>
+              Tap a category to change its colour (used in charts and lists).
+            </Text>
+            {categories.map((c) => (
+              <View key={c.id}>
+                <Pressable
+                  onPress={() => setExpandedCat(expandedCat === c.id ? null : c.id)}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 0.5, borderBottomColor: colors.surfaceBorder }}
+                >
+                  <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: c.color + '22', alignItems: 'center', justifyContent: 'center' }}>
+                    <Feather name={mapIcon(c.icon)} size={16} color={c.color} />
+                  </View>
+                  <Text style={{ flex: 1, ...typography.bodyMedium, color: colors.neutral900 }}>{c.name}</Text>
+                  <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: c.color, marginRight: 4 }} />
+                  <Feather name={expandedCat === c.id ? 'chevron-up' : 'chevron-down'} size={16} color={colors.neutral400} />
+                </Pressable>
+                {expandedCat === c.id && (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingVertical: 14, paddingLeft: 48 }}>
+                    {CATEGORY_COLOR_OPTIONS.map((col) => (
+                      <Pressable
+                        key={col}
+                        onPress={() => changeCategoryColor(c.id, col)}
+                        accessibilityLabel={`Set colour ${col}`}
+                        style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: col, alignItems: 'center', justifyContent: 'center', borderWidth: c.color === col ? 2 : 0, borderColor: colors.neutral900 }}
+                      >
+                        {c.color === col && <Feather name="check" size={16} color="#FFFFFF" />}
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
+              </View>
+            ))}
+          </>
+        )}
 
         {section === 'export' && (
           <View>

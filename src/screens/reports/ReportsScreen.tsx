@@ -133,6 +133,10 @@ export default function ReportsScreen({ navigation }: Props) {
                   data={breakdown.map(b => ({ value: b.total, color: b.category_color }))}
                   centerLabel="Total"
                   centerValue={formatCurrency(breakdown.reduce((s, b) => s + b.total, 0))}
+                  onSlicePress={(i) => {
+                    const b = breakdown[i];
+                    if (b) navigation.navigate('CategoryDrilldown', { categoryId: b.category_id, monthKey: monthKey() });
+                  }}
                 />
                 <View style={{ flex: 1, gap: 9 }}>
                   {breakdown.slice(0, 4).map(b => {
