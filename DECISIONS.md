@@ -96,6 +96,28 @@ It is updated continuously as work proceeds.
 
 ---
 
+## Phase 8 — First real device build (2026-07-20, Redmi 10 / Android 13)
+
+Four issues surfaced only once we built and ran on hardware. All are fixed and pinned.
+
+| # | Symptom | Root cause | Fix |
+|---|---------|-----------|-----|
+| 8.1 | Gradle: `Failed to install: build-tools;35.0.0` | `@dr.pogodin/react-native-fs` pins Build-Tools 35 internally; Gradle couldn't auto-install it (license not pre-accepted) | Installed `build-tools;35.0.0` + `platforms;android-35` via `sdkmanager` |
+| 8.2 | Codegen: `setToolbarMenuElementOptions must be of type React.ElementRef<>` | `^4.11.1` resolved to **react-native-screens 4.26.2**, too new — its codegen spec uses a format RN 0.81's codegen can't parse | Pin screens to an exact version |
+| 8.3 | C++: `'Shared' is deprecated ... [-Werror]` | Dropping to screens **4.11.1** was too *old* — its C++ uses an API RN 0.81 deprecated, and warnings are errors | **Pinned `react-native-screens` to exactly `4.16.0`** — matched by release date to RN 0.81 (Aug 2025) and verified in-source: uses `std::shared_ptr<const ShadowNode>` and has no `setToolbarMenuElementOptions` |
+| 8.4 | **App installed but crashed ~2s after opening** | `Exception in HostObject::get for prop 'OPSQLite': TurboModuleInteropUtils$ParsingException — TurboModule system assumes returnType == void iff the method is synchronous`. op-sqlite's native module cannot be parsed by the **New Architecture** TurboModule interop layer | **`newArchEnabled=false`** in `android/gradle.properties` (classic architecture; RN 0.81 fully supports it and every library here works on it) |
+
+Also hardened while diagnosing 8.4: `src/services/lock.ts` was constructing
+`ReactNativeBiometrics` at **module scope**, which runs during startup (App.tsx imports it) —
+a native failure there would crash before React could render, uncatchable by the ErrorBoundary.
+It is now lazily `require`d and constructed inside a `try/catch`, so biometrics degrading just
+disables that feature instead of killing the app.
+
+**Lesson for this project:** pin native-module versions exactly (no `^`) — a caret silently
+pulled in a screens version built for a newer React Native.
+
+---
+
 ## Known follow-ups (need a device / designer, can't be done/verified in this headless env)
 
 - **On-device QA**: run the app on a real Android device and exercise every flow (no Android SDK here, so only `tsc` + Metro bundle are verified).

@@ -6,14 +6,31 @@
 // fingerprint/face sensor via react-native-biometrics.
 
 import * as Keychain from 'react-native-keychain';
-import ReactNativeBiometrics from 'react-native-biometrics';
 import { sha256 } from 'js-sha256';
 import { getSetting, setSetting } from '@/db/database';
 
 const PIN_SERVICE = 'com.tally.app.pin';
 const SALT_KEY = 'pin_salt';
 
-const biometrics = new ReactNativeBiometrics({ allowDeviceCredentials: false });
+// react-native-biometrics is loaded AND constructed lazily, inside a try/catch.
+// Doing this at module scope would run during app startup (App.tsx imports this file),
+// so any failure in the native module would crash the app before React can render —
+// with no error boundary able to catch it. Biometrics is optional, so degrade gracefully.
+let biometricsInstance: any;
+let biometricsResolved = false;
+
+function getBiometrics(): any | null {
+  if (biometricsResolved) return biometricsInstance ?? null;
+  biometricsResolved = true;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const RNBiometrics = require('react-native-biometrics').default;
+    biometricsInstance = new RNBiometrics({ allowDeviceCredentials: false });
+  } catch {
+    biometricsInstance = null;
+  }
+  return biometricsInstance ?? null;
+}
 
 function hashPin(pin: string, salt: string): string {
   return sha256(`${salt}:${pin}`);
@@ -68,7 +85,9 @@ export async function clearPin(): Promise<void> {
 
 export async function isBiometricAvailable(): Promise<boolean> {
   try {
-    const { available } = await biometrics.isSensorAvailable();
+    const b = getBiometrics();
+    if (!b) return false;
+    const { available } = await b.isSensorAvailable();
     return available;
   } catch {
     return false;
@@ -85,7 +104,9 @@ export async function setBiometricEnabled(enabled: boolean): Promise<void> {
 
 export async function authenticateBiometric(prompt = 'Unlock Tally'): Promise<boolean> {
   try {
-    const { success } = await biometrics.simplePrompt({ promptMessage: prompt, cancelButtonText: 'Use PIN' });
+    const b = getBiometrics();
+    if (!b) return false;
+    const { success } = await b.simplePrompt({ promptMessage: prompt, cancelButtonText: 'Use PIN' });
     return success;
   } catch {
     return false;

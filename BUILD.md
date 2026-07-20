@@ -273,6 +273,24 @@ still works but signs with the debug key — fine for testing, **not** accepted 
 | Stuck / weird cached error | `cd android && ./gradlew clean && cd ..` then rebuild. On Windows use `.\gradlew.bat clean`. |
 | `adb: command not found` | Add `platform-tools` to PATH (step 1e) and reopen the terminal. |
 | npm install fails on peer deps | Make sure you used `npm install --legacy-peer-deps`. |
+| `Failed to install the following SDK components: build-tools;35.0.0` | A dependency pins Build-Tools 35. Install it: `$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;35.0.0" "platforms;android-35"` (answer `y` to licenses). |
+| Codegen error mentioning `react-native-screens` | Version mismatch with React Native. Keep `react-native-screens` pinned **exactly** (`4.16.0`) — no `^`. Newer versions break RN 0.81's codegen; older ones fail the C++ compile. |
+| **App installs but closes ~2s after opening** | Read the real cause from the device: see "Reading a crash log" below. Ours was op-sqlite failing under the New Architecture — fixed by `newArchEnabled=false` in `android/gradle.properties`. |
+
+### Reading a crash log (when the app opens then closes)
+
+With the phone connected and USB debugging on:
+
+```bash
+adb logcat -c                                     # clear old logs
+adb shell am force-stop com.tally.app             # ensure a clean start
+adb shell am start -n com.tally.app/.MainActivity # launch it
+# let it crash, then:
+adb logcat -d > /tmp/crash.log
+grep -A 40 "FATAL EXCEPTION" /tmp/crash.log       # the actual error + stack
+grep "ReactNativeJS" /tmp/crash.log               # JavaScript-side errors
+```
+The line right after `FATAL EXCEPTION` names the real cause — always start there instead of guessing.
 
 ---
 
