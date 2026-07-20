@@ -79,7 +79,11 @@ export default function LockScreen({ onUnlock }: { onUnlock: () => void }) {
 
   function handleDigit(d: string) {
     if (state === 'lockout') return;
-    const next = pin + d;
+    // After a wrong attempt the dots were frozen showing 4 red; start a fresh entry on the
+    // first new keypress so the dots track input again (otherwise it felt like input was ignored).
+    const base = state === 'wrong' ? '' : pin;
+    if (state === 'wrong') setState('entry');
+    const next = base + d;
     if (next.length <= PIN_LENGTH) {
       haptic('selection');
       setPin(next);

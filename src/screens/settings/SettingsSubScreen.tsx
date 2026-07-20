@@ -11,6 +11,9 @@ import { exportBackup, exportTransactionsCsv, importBackupInteractive } from '@/
 import { rescheduleAllHabitReminders } from '@/services/notifications';
 import { resetDbHandle } from '@/db/database';
 import SetPinScreen from '@/screens/lock/SetPinScreen';
+import VerifyPinScreen from '@/screens/lock/VerifyPinScreen';
+import { isPinSet } from '@/services/lock';
+import { lockColors } from '@/theme/colors';
 import { RootStackParamList } from '@/navigation/RootNavigator';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SettingsSub'>;
@@ -21,10 +24,13 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
   const [accounts, setAccounts] = useState<AccountWithBalance[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
+  const [pinStage, setPinStage] = useState<'checking' | 'verify' | 'set'>('checking');
 
   useEffect(() => {
     if (section === 'accounts') listAccounts().then(setAccounts);
     if (section === 'categories') listCategories().then(setCategories);
+    // When changing the PIN: verify the current one first (if one exists).
+    if (section === 'pin') isPinSet().then((set) => setPinStage(set ? 'verify' : 'set'));
   }, [section]);
 
   const titles: Record<string, string> = {
@@ -32,9 +38,22 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
     categories: 'Manage categories', export: 'Export data', backup: 'Backup & restore', privacy: 'Privacy',
   };
 
-  // Dedicated full-screen PIN flow.
+  // Dedicated full-screen PIN flow: verify current PIN (if set) -> set new PIN.
   if (section === 'pin') {
-    return <SetPinScreen title="Set app PIN" onCancel={() => navigation.goBack()} onDone={() => navigation.goBack()} />;
+    if (pinStage === 'checking') {
+      return <SafeAreaView style={{ flex: 1, backgroundColor: lockColors.background }} />;
+    }
+    if (pinStage === 'verify') {
+      return (
+        <VerifyPinScreen
+          title="Enter current PIN"
+          subtitle="Verify your current PIN to change it"
+          onCancel={() => navigation.goBack()}
+          onSuccess={() => setPinStage('set')}
+        />
+      );
+    }
+    return <SetPinScreen title="Set new PIN" onCancel={() => navigation.goBack()} onDone={() => navigation.goBack()} />;
   }
 
   async function handleExportCsv() {

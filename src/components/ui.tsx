@@ -128,7 +128,7 @@ export function Chip({ label, selected, onPress, icon }: { label: string; select
       }}
     >
       {icon}
-      <Text style={{ ...typography.bodySmallMedium, color: selected ? '#FFFFFF' : colors.neutral600 }}>{label}</Text>
+      <Text style={{ ...typography.bodySmallMedium, color: selected ? colors.neutral0 : colors.neutral600 }}>{label}</Text>
     </Pressable>
   );
 }
