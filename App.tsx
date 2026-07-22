@@ -14,6 +14,7 @@ import { RootNavigator } from '@/navigation/RootNavigator';
 import OnboardingNavigator from '@/screens/onboarding/OnboardingNavigator';
 import LockScreen from '@/screens/lock/LockScreen';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { TourProvider } from '@/tour/TourProvider';
 import { runStartupTasks } from '@/services/startup';
 import { isPinSet, isBiometricAvailable } from '@/services/lock';
 import { setActiveCurrency } from '@/utils/currency';
@@ -85,7 +86,9 @@ function AppInner() {
       {phase === 'locked' && <LockScreen onUnlock={() => setPhase('unlocked')} />}
       {phase === 'unlocked' && (
         <NavigationContainer theme={navTheme}>
-          <RootNavigator />
+          <TourProvider>
+            <RootNavigator />
+          </TourProvider>
         </NavigationContainer>
       )}
     </View>

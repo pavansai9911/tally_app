@@ -12,6 +12,7 @@ import {
 import VerifyPinScreen from '@/screens/lock/VerifyPinScreen';
 import { getActiveCurrency } from '@/utils/currency';
 import { APP_VERSION } from '@/constants/app';
+import { useTour } from '@/tour/TourProvider';
 import { RootStackParamList } from '@/navigation/RootNavigator';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
@@ -19,6 +20,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
 export default function SettingsScreen({ navigation }: Props) {
   const { colors, typography, radius, mode } = useTheme();
+  const { startTour } = useTour();
   const [lockEnabled, setLockEnabled] = useState(false);
   const [biometricOn, setBiometricOn] = useState(false);
   const [biometricHardware, setBiometricHardware] = useState(false);
@@ -118,6 +120,20 @@ export default function SettingsScreen({ navigation }: Props) {
         <Card>
           <Row label="Export data" value="" onPress={() => navigation.navigate('SettingsSub', { section: 'export' })} />
           <Row label="Backup & restore" value="" onPress={() => navigation.navigate('SettingsSub', { section: 'backup' })} last />
+        </Card>
+
+        <SectionLabel title="Help" />
+        <Card>
+          <Row
+            label="Restart product tour"
+            value=""
+            onPress={() => {
+              // Return to Home first — that is where the tour begins.
+              navigation.navigate('Tabs');
+              setTimeout(() => startTour(), 450);
+            }}
+            last
+          />
         </Card>
 
         <SectionLabel title="Developer / testing" />

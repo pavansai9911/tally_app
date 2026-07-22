@@ -3,6 +3,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Feather from 'react-native-vector-icons/Feather';
 import { useTheme } from '@/theme/ThemeProvider';
+import { TourTarget } from '@/tour/TourTarget';
+import { useTour } from '@/tour/TourProvider';
 
 // Home
 import DashboardScreen from '@/screens/home/DashboardScreen';
@@ -128,8 +130,18 @@ function ReportsNavigator() {
 
 function MainTabs() {
   const { colors } = useTheme();
+  const { registerTabSwitcher } = useTour();
+  const tabNavRef = React.useRef<any>(null);
+
+  // Let the product tour move between tabs as it walks through the app.
+  React.useEffect(() => {
+    registerTabSwitcher((tab: string) => tabNavRef.current?.navigate(tab));
+    return () => registerTabSwitcher(null);
+  }, [registerTabSwitcher]);
+
   return (
     <Tabs.Navigator
+      screenListeners={({ navigation }) => { tabNavRef.current = navigation; return {}; }}
       screenOptions={{
         headerShown: false,
         animation: 'fade',
@@ -153,7 +165,9 @@ function MainTabs() {
         name="Money"
         component={MoneyNavigator}
         options={{
-          tabBarIcon: ({ color, size }) => <Feather name="credit-card" size={21} color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <TourTarget id="tab-money"><Feather name="credit-card" size={21} color={color} /></TourTarget>
+          ),
         }}
         listeners={({ navigation: tabNav }) => ({
           // Tapping the Money tab always lands on Transactions. Without this the stack keeps
@@ -164,10 +178,14 @@ function MainTabs() {
         })}
       />
       <Tabs.Screen name="Habits" component={HabitsNavigator} options={{
-        tabBarIcon: ({ color, size }) => <Feather name="check-square" size={21} color={color} />,
+        tabBarIcon: ({ color, size }) => (
+          <TourTarget id="tab-habits"><Feather name="check-square" size={21} color={color} /></TourTarget>
+        ),
       }} />
       <Tabs.Screen name="Reports" component={ReportsNavigator} options={{
-        tabBarIcon: ({ color, size }) => <Feather name="bar-chart-2" size={21} color={color} />,
+        tabBarIcon: ({ color, size }) => (
+          <TourTarget id="tab-reports"><Feather name="bar-chart-2" size={21} color={color} /></TourTarget>
+        ),
       }} />
     </Tabs.Navigator>
   );
