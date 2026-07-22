@@ -6,6 +6,8 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { ProgressBar } from '@/components/ui';
+import { TourTarget } from '@/tour/TourTarget';
+import { useTour } from '@/tour/TourProvider';
 import { AssistantFab } from '@/components/assistant/AssistantFab';
 import { AssistantSheet } from '@/components/assistant/AssistantSheet';
 import { mapIcon } from '@/utils/iconMap';
@@ -23,6 +25,9 @@ export default function DashboardScreen() {
   const navigation = useNavigation<Nav>();
   const { colors, typography, radius, isDark } = useTheme();
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const { registerScroller, maybeAutoStart } = useTour();
+  const scrollRef = React.useRef<ScrollView>(null);
+  const scrollY = React.useRef(0);
   const [summary, setSummary] = useState<MonthSummary>({ income: 0, expense: 0, net: 0 });
   const [totalBalance, setTotalBalance] = useState(0);
   const [budgets, setBudgets] = useState<BudgetWithSpend[]>([]);
@@ -38,6 +43,21 @@ export default function DashboardScreen() {
   }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  // Let the tour scroll Home so an off-screen highlight becomes visible.
+  React.useEffect(() => {
+    registerScroller((deltaY: number) => {
+      const next = Math.max(0, scrollY.current + deltaY);
+      scrollRef.current?.scrollTo({ y: next, animated: true });
+    });
+    return () => registerScroller(null);
+  }, [registerScroller]);
+
+  // First run after onboarding: start the product tour once.
+  React.useEffect(() => {
+    const t = setTimeout(() => maybeAutoStart(), 900);
+    return () => clearTimeout(t);
+  }, [maybeAutoStart]);
 
   async function toggleHabit(h: any) {
     if (h.log?.status === 'done') await deleteLog(h.id, todayKey());
@@ -56,15 +76,23 @@ export default function DashboardScreen() {
           <Text style={{ ...typography.bodySmall, color: colors.neutral500 }}>{formatWeekdayLong()}</Text>
           <Text style={{ ...typography.h1, color: colors.neutral900 }}>{greeting}</Text>
         </View>
-        <Pressable onPress={() => navigation.navigate('Settings')} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: isDark ? colors.surfaceCard : colors.neutral900, alignItems: 'center', justifyContent: 'center' }}>
-          <Feather name="settings" size={18} color="#FFFFFF" />
-        </Pressable>
+        <TourTarget id="home-settings">
+          <Pressable onPress={() => navigation.navigate('Settings')} style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: isDark ? colors.surfaceCard : colors.neutral900, alignItems: 'center', justifyContent: 'center' }}>
+            <Feather name="settings" size={18} color="#FFFFFF" />
+          </Pressable>
+        </TourTarget>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 104 }}>
+      <ScrollView
+        ref={scrollRef}
+        onScroll={(e) => { scrollY.current = e.nativeEvent.contentOffset.y; }}
+        scrollEventThrottle={16}
+        contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 104 }}
+      >
+        <TourTarget id="home-hero" style={{ marginBottom: 16 }}>
         <Pressable
           onPress={() => navigation.navigate('Money', { screen: 'AccountsList' })}
-          style={{ backgroundColor: isDark ? colors.neutral200 : colors.neutral900, borderRadius: radius.xl, padding: 20, marginBottom: 16 }}
+          style={{ backgroundColor: isDark ? colors.neutral200 : colors.neutral900, borderRadius: radius.xl, padding: 20 }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <Text style={{ ...typography.caption, color: colors.neutral400, textTransform: 'uppercase' }}>Total balance</Text>
@@ -79,8 +107,10 @@ export default function DashboardScreen() {
             </View>
           )}
         </Pressable>
+        </TourTarget>
 
-        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
+        <TourTarget id="home-quick-actions" style={{ marginBottom: 20 }}>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
           <Pressable onPress={() => navigation.navigate('Money', { screen: 'AddEditTransaction' })} style={{ flex: 1, height: 44, backgroundColor: colors.surfaceCard, borderWidth: 0.5, borderColor: colors.surfaceBorder, borderRadius: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
             <Feather name="plus" size={16} color={colors.accent500} />
             <Text style={{ ...typography.bodySmallMedium, color: colors.neutral900 }}>Transaction</Text>
@@ -90,8 +120,10 @@ export default function DashboardScreen() {
             <Text style={{ ...typography.bodySmallMedium, color: colors.neutral900 }}>Check-in</Text>
           </Pressable>
         </View>
+        </TourTarget>
 
         <SectionHeader title="Budget progress" onPress={() => navigation.navigate('Money', { screen: 'BudgetsList' })} />
+        <TourTarget id="home-budgets">
         {budgets.length === 0 ? (
           <EmptyCard icon="pie-chart" title="No budgets yet" subtitle="Set spending limits to see progress here" />
         ) : (
@@ -114,8 +146,10 @@ export default function DashboardScreen() {
             })}
           </View>
         )}
+        </TourTarget>
 
         <SectionHeader title="Today's habits" onPress={() => navigation.navigate('Habits', { screen: 'HabitList' })} />
+        <TourTarget id="home-habits">
         {habits.length === 0 ? (
           <EmptyCard icon="check-square" title="No habits scheduled today" subtitle="Add a habit to start building streaks" />
         ) : (
@@ -138,7 +172,10 @@ export default function DashboardScreen() {
           </View>
         )}
 
+        </TourTarget>
+
         <SectionHeader title="Recent transactions" onPress={() => navigation.navigate('Money', { screen: 'TransactionList' })} />
+        <TourTarget id="home-recent">
         {recentTx.length === 0 ? (
           <EmptyCard icon="file-text" title="No transactions yet" subtitle="Your recent activity will show up here" />
         ) : (
@@ -169,10 +206,13 @@ export default function DashboardScreen() {
             ))}
           </View>
         )}
+        </TourTarget>
       </ScrollView>
 
       {/* Tally Assistant — Home only. Sits above the tab bar so it never covers content. */}
-      <AssistantFab onPress={() => setAssistantOpen(true)} />
+      <TourTarget id="home-assistant-fab" style={{ position: 'absolute', right: 20, bottom: 20 }}>
+        <AssistantFab onPress={() => setAssistantOpen(true)} embedded />
+      </TourTarget>
       <AssistantSheet
         visible={assistantOpen}
         onClose={() => { setAssistantOpen(false); load(); }}

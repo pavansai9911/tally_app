@@ -24,7 +24,7 @@ function AssistantGlyph({ size = 26, color = '#FFFFFF' }: { size?: number; color
  * Home-screen assistant FAB. Sits above the bottom tab bar so it never covers content or
  * the navigation bar, and gently pulses once on mount to invite discovery.
  */
-export function AssistantFab({ onPress }: { onPress: () => void }) {
+export function AssistantFab({ onPress, embedded = false }: { onPress: () => void; embedded?: boolean }) {
   const { colors } = useTheme();
   const pulse = useRef(new Animated.Value(0)).current;
   const press = useRef(new Animated.Value(0)).current;
@@ -38,7 +38,7 @@ export function AssistantFab({ onPress }: { onPress: () => void }) {
   }, [pulse]);
 
   return (
-    <View style={{ position: 'absolute', right: 20, bottom: 20 }} pointerEvents="box-none">
+    <View style={embedded ? undefined : { position: 'absolute', right: 20, bottom: 20 }} pointerEvents="box-none">
       {/* Halo */}
       <Animated.View
         pointerEvents="none"
