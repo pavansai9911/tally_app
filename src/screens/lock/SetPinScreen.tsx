@@ -4,6 +4,7 @@ import Feather from 'react-native-vector-icons/Feather';
 import { lockColors } from '@/theme/colors';
 import { haptic } from '@/utils/haptics';
 import { setPin } from '@/services/lock';
+import { SuccessOverlay } from '@/components/SuccessOverlay';
 
 const PIN_LENGTH = 4;
 
@@ -24,6 +25,7 @@ export default function SetPinScreen({
   const [first, setFirst] = useState('');
   const [pin, setPinValue] = useState('');
   const [error, setError] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   async function commit(entered: string) {
     if (step === 'create') {
@@ -35,7 +37,7 @@ export default function SetPinScreen({
     if (entered === first) {
       await setPin(entered);
       haptic('notificationSuccess');
-      onDone();
+      setSaved(true);
     } else {
       haptic('notificationError');
       setError(true);
@@ -71,6 +73,7 @@ export default function SetPinScreen({
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: lockColors.background }}>
+      <SuccessOverlay visible={saved} message="PIN set" onDone={() => { setSaved(false); onDone(); }} />
       {onCancel && (
         <Pressable onPress={onCancel} style={{ padding: 16 }} accessibilityLabel="Cancel">
           <Feather name="x" size={24} color="#FFFFFF" />

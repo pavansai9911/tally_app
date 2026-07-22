@@ -11,11 +11,11 @@ import {
 } from '@/services/lock';
 import VerifyPinScreen from '@/screens/lock/VerifyPinScreen';
 import { getActiveCurrency } from '@/utils/currency';
+import { APP_VERSION } from '@/constants/app';
 import { RootStackParamList } from '@/navigation/RootNavigator';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
-const APP_VERSION = '1.0.0';
 
 export default function SettingsScreen({ navigation }: Props) {
   const { colors, typography, radius, mode } = useTheme();
@@ -118,6 +118,12 @@ export default function SettingsScreen({ navigation }: Props) {
         <Card>
           <Row label="Export data" value="" onPress={() => navigation.navigate('SettingsSub', { section: 'export' })} />
           <Row label="Backup & restore" value="" onPress={() => navigation.navigate('SettingsSub', { section: 'backup' })} last />
+        </Card>
+
+        <SectionLabel title="Developer / testing" />
+        <Card>
+          <Row label="Seed sample data" value="" onPress={() => navigation.navigate('SettingsSub', { section: 'seed' })} />
+          <Row label="Reminder diagnostics" value="" onPress={() => navigation.navigate('SettingsSub', { section: 'reminders' })} last />
         </Card>
 
         <SectionLabel title="About" />

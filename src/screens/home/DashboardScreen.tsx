@@ -143,9 +143,9 @@ export default function DashboardScreen() {
             {recentTx.map((t, i) => (
               <Pressable
                 key={t.id}
-                onPress={() => navigation.navigate('Money', { screen: 'AddEditTransaction', params: { id: t.id } })}
+                onPress={() => navigation.navigate('Money', { screen: 'TransactionDetail', params: { id: t.id } })}
                 accessibilityRole="button"
-                accessibilityLabel={`Edit transaction ${t.note || t.category_name}`}
+                accessibilityLabel={`View transaction ${t.note || t.category_name}`}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderBottomWidth: i === recentTx.length - 1 ? 0 : 0.5, borderBottomColor: colors.surfaceBorder }}
               >
                 <View style={{ width: 30, height: 30, borderRadius: 9, backgroundColor: (t.category_color ?? colors.neutral400) + '22', alignItems: 'center', justifyContent: 'center' }}>

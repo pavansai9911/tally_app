@@ -6,6 +6,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { EmptyState } from '@/components/ui';
 import { SwipeTabView } from '@/components/SwipeTabView';
+import { FadeInView } from '@/components/SuccessOverlay';
 import { mapIcon } from '@/utils/iconMap';
 import { todayKey } from '@/utils/format';
 import { getTodayHabitsWithStatus, listHabits, upsertLog, deleteLog, calculateStreaks, Habit, HabitLog } from '@/db';
@@ -86,6 +87,7 @@ export default function HabitListScreen({ navigation }: Props) {
           />
         ) : (
         <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 100 }}>
+          <FadeInView trigger={`today-${todayHabits.length}-${doneCount}`}>
           {/* Daily progress lives inside the page so it doesn't flicker while swiping. */}
           <View style={{ paddingBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <View style={{ flex: 1, height: 8, backgroundColor: colors.neutral100, borderRadius: 4, overflow: 'hidden' }}>
@@ -119,6 +121,7 @@ export default function HabitListScreen({ navigation }: Props) {
               </Pressable>
             );
           })}
+          </FadeInView>
         </ScrollView>
         )}
 
@@ -133,6 +136,7 @@ export default function HabitListScreen({ navigation }: Props) {
           />
         ) : (
         <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 100 }}>
+          <FadeInView trigger={`all-${allHabits.length}`}>
           {['build', 'quit'].map(group => {
             const items = allHabits.filter(h => h.type === group);
             if (items.length === 0) return null;
@@ -160,6 +164,7 @@ export default function HabitListScreen({ navigation }: Props) {
               </View>
             );
           })}
+          </FadeInView>
         </ScrollView>
         )}
       </SwipeTabView>

@@ -57,6 +57,15 @@ react {
 }
 
 /**
+ * Read the app version from package.json (single source of truth, shared with the JS side).
+ */
+def tallyPkg = new groovy.json.JsonSlurper().parseText(file("../../package.json").text)
+def tallyVersion = tallyPkg.version as String
+def tallyParts = tallyVersion.tokenize('.')
+project.ext.tallyVersionName = tallyVersion
+project.ext.tallyVersionCode = (tallyParts[0] as int) * 10000 + (tallyParts[1] as int) * 100 + (tallyParts[2] as int)
+
+/**
  * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
  */
 def enableProguardInReleaseBuilds = false
@@ -84,8 +93,11 @@ android {
         applicationId "com.tally.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0.0"
+        // Version comes from package.json so the Settings screen (which imports the same
+        // file) and the Android build can never drift. Bump only package.json to release.
+        // versionCode is derived: 1.2.3 -> 1*10000 + 2*100 + 3 = 10203 (always increasing).
+        versionCode project.ext.tallyVersionCode
+        versionName project.ext.tallyVersionName
     }
     signingConfigs {
         debug {

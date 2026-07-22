@@ -93,7 +93,8 @@ export async function exportTransactionsCsv(): Promise<void> {
     const s = v == null ? '' : String(v);
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
-  const header = 'Date,Type,Amount,Category,Account,Note';
+  // occurred_at is 'YYYY-MM-DD HH:MM' (older rows may be date-only).
+  const header = 'Date & time,Type,Amount,Category,Account,Note';
   const lines = rows.map((r) =>
     [r.occurred_at, r.type, r.amount, r.category_name ?? '', r.account_name, r.note ?? ''].map(esc).join(','),
   );

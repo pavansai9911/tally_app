@@ -4,14 +4,15 @@ import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { SegmentOption } from '@/components/ui';
-import { DateField } from '@/components/DateTimeField';
+import { DateField, TimeField } from '@/components/DateTimeField';
 import { SwipeTabView } from '@/components/SwipeTabView';
+import { SuccessOverlay } from '@/components/SuccessOverlay';
 import { mapIcon } from '@/utils/iconMap';
 import {
   createTransaction, updateTransaction, getTransaction, listCategories, listAccounts,
   Category, AccountWithBalance,
 } from '@/db';
-import { todayKey } from '@/utils/format';
+import { todayKey, toTimeKey, toTimestamp, timePartOf } from '@/utils/format';
 import { getActiveCurrency } from '@/utils/currency';
 import { haptic } from '@/utils/haptics';
 import { MoneyStackParamList } from '@/navigation/RootNavigator';
@@ -31,10 +32,13 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
   const [toAccountId, setToAccountId] = useState<string | null>(null);
   const [note, setNote] = useState('');
   const [occurredAt, setOccurredAt] = useState(todayKey());
+  // Time defaults to the current system time for new transactions.
+  const [occurredTime, setOccurredTime] = useState(toTimeKey());
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showAccountPicker, setShowAccountPicker] = useState(false);
   const [showToAccountPicker, setShowToAccountPicker] = useState(false);
   const [touched, setTouched] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -52,6 +56,7 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
           setToAccountId(tx.to_account_id);
           setNote(tx.note ?? '');
           setOccurredAt(tx.occurred_at.slice(0, 10));
+          setOccurredTime(timePartOf(tx.occurred_at) ?? toTimeKey());
         }
       }
     })();
@@ -98,7 +103,7 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
       to_account_id: type === 'transfer' ? toAccountId : null,
       category_id: type === 'transfer' ? null : categoryId,
       note: note.trim() || null,
-      occurred_at: occurredAt,
+      occurred_at: toTimestamp(occurredAt, occurredTime),
       recurring_id: null,
     };
     if (editId) {
@@ -107,7 +112,8 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
       await createTransaction(payload);
     }
     haptic('notificationSuccess');
-    navigation.goBack();
+    // Brief success animation, then return to the previous screen.
+    setSaved(true);
   }
 
   const selectedCategory = categories.find((c) => c.id === categoryId);
@@ -187,6 +193,7 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
         )}
 
         <DateField label="Date" value={occurredAt} onChange={setOccurredAt} maximumDate={new Date(2100, 0, 1)} />
+        <TimeField label="Time" value={occurredTime} onChange={setOccurredTime} />
 
         <View style={{ paddingVertical: 14 }}>
           <Text style={{ ...typography.bodyMedium, color: colors.neutral900, marginBottom: 8 }}>Note</Text>
@@ -204,6 +211,11 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.neutral0 }}>
+      <SuccessOverlay
+        visible={saved}
+        message={editId ? 'Changes saved' : 'Transaction added'}
+        onDone={() => { setSaved(false); navigation.goBack(); }}
+      />
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8 }}>
         <Pressable onPress={() => navigation.goBack()} hitSlop={8} accessibilityLabel="Close">
           <Feather name="x" size={22} color={colors.neutral900} />

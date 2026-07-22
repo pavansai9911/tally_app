@@ -103,3 +103,49 @@ export function formatFullDate(dateStr: string): string {
   const d = parseDateKey(dateStr);
   return `${d.getDate()} ${MONTHS_LONG[d.getMonth()]} ${d.getFullYear()}`;
 }
+
+// ---------------------------------------------------------------------------
+// Date + time
+//
+// Transactions store `occurred_at` as 'YYYY-MM-DD HH:MM' (local time, lexicographically
+// sortable). Rows created before time support existed are plain 'YYYY-MM-DD' — every
+// helper below tolerates both, so old data keeps working.
+// ---------------------------------------------------------------------------
+
+/** 'HH:MM' (24h, local) for the given date — defaults to now. */
+export function toTimeKey(d: Date = new Date()): string {
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+/** Combine a 'YYYY-MM-DD' key and an 'HH:MM' key into the stored timestamp. */
+export function toTimestamp(dateKey: string, timeKey: string): string {
+  return `${dateKey.slice(0, 10)} ${timeKey}`;
+}
+
+/** Extract 'HH:MM' from a stored timestamp; null when the row has no time. */
+export function timePartOf(stored: string): string | null {
+  const m = stored.match(/^\d{4}-\d{2}-\d{2}[ T](\d{2}:\d{2})/);
+  return m ? m[1] : null;
+}
+
+/** '14:05' -> '2:05 PM'. */
+export function formatTime12(timeKey: string): string {
+  const [h, m] = timeKey.split(':').map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return '';
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${pad2(m)} ${ampm}`;
+}
+
+/** Time label for a stored timestamp, or '' when it has no time component. */
+export function formatStoredTime(stored: string): string {
+  const t = timePartOf(stored);
+  return t ? formatTime12(t) : '';
+}
+
+/** e.g. "Today · 2:05 PM" (falls back to just the date for legacy rows). */
+export function formatDateTimeLabel(stored: string): string {
+  const time = formatStoredTime(stored);
+  const date = formatDateLabel(stored);
+  return time ? `${date} · ${time}` : date;
+}
