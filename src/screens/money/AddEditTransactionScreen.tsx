@@ -11,6 +11,7 @@ import {
   Category, AccountWithBalance,
 } from '@/db';
 import { todayKey } from '@/utils/format';
+import { getActiveCurrency } from '@/utils/currency';
 import { haptic } from '@/utils/haptics';
 import { MoneyStackParamList } from '@/navigation/RootNavigator';
 
@@ -137,7 +138,9 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
 
       <View style={{ alignItems: 'center', paddingVertical: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ fontSize: 40, fontWeight: '700', color: errorMsg && !amountValid ? colors.expense : colors.neutral900 }}>₹</Text>
+          <Text style={{ fontSize: 40, fontWeight: '700', color: errorMsg && !amountValid ? colors.expense : colors.neutral900 }}>
+            {getActiveCurrency().symbol}
+          </Text>
           <TextInput
             value={amount}
             onChangeText={handleAmountChange}

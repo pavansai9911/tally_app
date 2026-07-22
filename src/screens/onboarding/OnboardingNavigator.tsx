@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { setSetting, createAccount, genId, getDb } from '@/db';
+import { setActiveCurrency } from '@/utils/currency';
 import { useOnboardingState } from './useOnboardingState';
-import WelcomeScreen from './WelcomeScreen';
+import WalkthroughScreen from './WalkthroughScreen';
 import CurrencyScreen from './CurrencyScreen';
 import FirstAccountScreen from './FirstAccountScreen';
 import AppLockScreen from './AppLockScreen';
@@ -15,6 +16,7 @@ export default function OnboardingNavigator({ onComplete }: { onComplete: () => 
     await getDb();
     await setSetting('currency', data.currency);
     await setSetting('currency_symbol', data.currencySymbol);
+    setActiveCurrency(data.currency); // apply immediately to all formatting
     await createAccount({
       name: data.accountName || 'Cash',
       type: data.accountType,
@@ -32,7 +34,7 @@ export default function OnboardingNavigator({ onComplete }: { onComplete: () => 
 
   switch (step) {
     case 0:
-      return <WelcomeScreen onNext={() => setStep(1)} />;
+      return <WalkthroughScreen onNext={() => setStep(1)} />;
     case 1:
       return <CurrencyScreen data={data} update={update} onNext={() => setStep(2)} onBack={() => setStep(0)} />;
     case 2:
@@ -50,6 +52,6 @@ export default function OnboardingNavigator({ onComplete }: { onComplete: () => 
     case 4:
       return <AllSetScreen onFinish={finish} />;
     default:
-      return <WelcomeScreen onNext={() => setStep(1)} />;
+      return <WalkthroughScreen onNext={() => setStep(1)} />;
   }
 }

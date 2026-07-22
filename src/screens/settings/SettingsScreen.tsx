@@ -10,6 +10,7 @@ import {
   authenticateBiometric,
 } from '@/services/lock';
 import VerifyPinScreen from '@/screens/lock/VerifyPinScreen';
+import { getActiveCurrency } from '@/utils/currency';
 import { RootStackParamList } from '@/navigation/RootNavigator';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
@@ -22,12 +23,14 @@ export default function SettingsScreen({ navigation }: Props) {
   const [biometricOn, setBiometricOn] = useState(false);
   const [biometricHardware, setBiometricHardware] = useState(false);
   const [pendingDisable, setPendingDisable] = useState(false);
+  const [currencyCode, setCurrencyCode] = useState(getActiveCurrency().code);
 
   const reload = useCallback(() => {
     (async () => {
       setLockEnabled(await isPinSet());
       setBiometricOn(await isBiometricEnabled());
       setBiometricHardware(await isBiometricAvailable());
+      setCurrencyCode(getActiveCurrency().code);
     })();
   }, []);
 
@@ -92,6 +95,7 @@ export default function SettingsScreen({ navigation }: Props) {
       <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
         <SectionLabel title="General" />
         <Card>
+          <Row label="Currency" value={currencyCode} onPress={() => navigation.navigate('SettingsSub', { section: 'currency' })} />
           <Row label="Theme" value={mode === 'system' ? 'System' : mode === 'dark' ? 'Dark' : 'Light'} onPress={() => navigation.navigate('SettingsSub', { section: 'theme' })} last />
         </Card>
 

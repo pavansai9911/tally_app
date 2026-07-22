@@ -16,6 +16,7 @@ import LockScreen from '@/screens/lock/LockScreen';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { runStartupTasks } from '@/services/startup';
 import { isPinSet, isBiometricAvailable } from '@/services/lock';
+import { setActiveCurrency } from '@/utils/currency';
 
 type AppPhase = 'loading' | 'onboarding' | 'locked' | 'unlocked';
 
@@ -27,6 +28,8 @@ function AppInner() {
     (async () => {
       try {
         await getDb(); // runs migrations + seeds defaults
+        // Apply the user's saved currency before anything renders amounts.
+        setActiveCurrency(await getSetting('currency'));
         const onboarded = await hasCompletedOnboarding();
         if (!onboarded) {
           setPhase('onboarding');

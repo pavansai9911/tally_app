@@ -69,7 +69,7 @@ export default function BudgetDetailScreen({ navigation, route }: Props) {
               <Feather name={mapIcon(t.category_icon ?? 'ti-dots')} size={16} color={colors.neutral500} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ ...typography.bodySmallMedium, color: colors.neutral900 }}>{t.note || t.category_name}</Text>
+              <Text style={{ ...typography.bodySmallMedium, color: colors.neutral900 }} numberOfLines={1} ellipsizeMode="tail">{t.note || t.category_name}</Text>
               <Text style={{ ...typography.caption, color: colors.neutral400 }}>{formatDateLabel(t.occurred_at)}</Text>
             </View>
             <Text style={{ ...typography.bodySmallMedium, color: colors.neutral900 }}>{formatCurrency(t.amount)}</Text>

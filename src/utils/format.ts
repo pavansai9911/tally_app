@@ -5,6 +5,8 @@
 // rolled the date back to "yesterday" between 00:00 and 05:30 local time,
 // corrupting habit logs, streaks and monthly summaries. Never use toISOString here.
 
+import { getActiveCurrency } from './currency';
+
 function pad2(n: number): string {
   return n < 10 ? `0${n}` : String(n);
 }
@@ -41,25 +43,32 @@ const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'S
 const MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const WEEKDAYS_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-export const DEFAULT_CURRENCY_SYMBOL = '₹';
+/** 1234567 -> "12,34,567" (Indian lakh/crore grouping). */
+function groupIndian(s: string): string {
+  if (s.length <= 3) return s;
+  const last3 = s.slice(-3);
+  const rest = s.slice(0, -3);
+  return `${rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',')},${last3}`;
+}
+
+/** 1234567 -> "1,234,567" (standard 3-digit grouping). */
+function groupWestern(s: string): string {
+  return s.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
 
 /**
- * Indian-grouping currency formatter that does NOT depend on Intl/Hermes locale data
- * (which is not guaranteed on every Android build). e.g. 1234567 -> "₹12,34,567".
+ * Currency formatter that does NOT depend on Intl/Hermes locale data (not guaranteed on
+ * every Android build). Uses the user's selected currency (symbol + grouping style) unless
+ * an explicit symbol is passed.
  */
-export function formatCurrency(amount: number, symbol: string = DEFAULT_CURRENCY_SYMBOL): string {
+export function formatCurrency(amount: number, symbol?: string): string {
+  const currency = getActiveCurrency();
+  const sym = symbol ?? currency.symbol;
   const rounded = Math.round(amount);
   const sign = rounded < 0 ? '-' : '';
-  const s = String(Math.abs(rounded));
-  let grouped: string;
-  if (s.length <= 3) {
-    grouped = s;
-  } else {
-    const last3 = s.slice(-3);
-    const rest = s.slice(0, -3);
-    grouped = `${rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',')},${last3}`;
-  }
-  return `${sign}${symbol}${grouped}`;
+  const digits = String(Math.abs(rounded));
+  const grouped = currency.grouping === 'indian' ? groupIndian(digits) : groupWestern(digits);
+  return `${sign}${sym}${grouped}`;
 }
 
 /** "Today" / "Yesterday" / "5 Jan" from a date key or timestamp. */

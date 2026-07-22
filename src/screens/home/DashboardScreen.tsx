@@ -141,15 +141,28 @@ export default function DashboardScreen() {
         ) : (
           <View style={{ backgroundColor: colors.surfaceCard, borderRadius: radius.lg, paddingHorizontal: 16 }}>
             {recentTx.map((t, i) => (
-              <View key={t.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderBottomWidth: i === recentTx.length - 1 ? 0 : 0.5, borderBottomColor: colors.surfaceBorder }}>
+              <Pressable
+                key={t.id}
+                onPress={() => navigation.navigate('Money', { screen: 'AddEditTransaction', params: { id: t.id } })}
+                accessibilityRole="button"
+                accessibilityLabel={`Edit transaction ${t.note || t.category_name}`}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderBottomWidth: i === recentTx.length - 1 ? 0 : 0.5, borderBottomColor: colors.surfaceBorder }}
+              >
                 <View style={{ width: 30, height: 30, borderRadius: 9, backgroundColor: (t.category_color ?? colors.neutral400) + '22', alignItems: 'center', justifyContent: 'center' }}>
                   <Feather name={mapIcon(t.category_icon ?? 'ti-dots')} size={14} color={t.category_color ?? colors.neutral500} />
                 </View>
-                <Text style={{ flex: 1, ...typography.bodySmallMedium, color: colors.neutral900 }}>{t.note || t.category_name}</Text>
+                {/* Long notes are previewed over at most two lines here. */}
+                <Text
+                  style={{ flex: 1, ...typography.bodySmallMedium, color: colors.neutral900 }}
+                  numberOfLines={2}
+                  ellipsizeMode="tail"
+                >
+                  {t.note || t.category_name}
+                </Text>
                 <Text style={{ ...typography.bodySmallMedium, color: t.type === 'income' ? colors.income : colors.expense }}>
                   {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount).replace('-', '')}
                 </Text>
-              </View>
+              </Pressable>
             ))}
           </View>
         )}

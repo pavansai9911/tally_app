@@ -62,7 +62,7 @@ export default function CategoryDrilldownScreen({ navigation, route }: Props) {
               <Feather name={mapIcon(category.icon)} size={16} color={colors.neutral500} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>{t.note || category.name}</Text>
+              <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }} numberOfLines={1} ellipsizeMode="tail">{t.note || category.name}</Text>
               <Text style={{ ...typography.caption, color: colors.neutral400 }}>{formatDateLabel(t.occurred_at)}</Text>
             </View>
             <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>{formatCurrency(t.amount)}</Text>

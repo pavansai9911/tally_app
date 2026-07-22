@@ -4,7 +4,8 @@ import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Button } from '@/components/ui';
-import { listAccounts, listCategories, updateCategory, AccountWithBalance, Category } from '@/db';
+import { listAccounts, listCategories, updateCategory, setSetting, AccountWithBalance, Category } from '@/db';
+import { CURRENCIES, getActiveCurrency, setActiveCurrency } from '@/utils/currency';
 import { mapIcon, CATEGORY_COLOR_OPTIONS } from '@/utils/iconMap';
 import { formatCurrency } from '@/utils/format';
 import { exportBackup, exportTransactionsCsv, importBackupInteractive } from '@/services/backup';
@@ -26,6 +27,7 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
   const [pinStage, setPinStage] = useState<'checking' | 'verify' | 'set'>('checking');
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
+  const [currencyCode, setCurrencyCode] = useState(getActiveCurrency().code);
 
   useEffect(() => {
     if (section === 'accounts') listAccounts().then(setAccounts);
@@ -40,7 +42,7 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
   }
 
   const titles: Record<string, string> = {
-    theme: 'Theme', pin: 'App PIN', accounts: 'Manage accounts',
+    currency: 'Currency', theme: 'Theme', pin: 'App PIN', accounts: 'Manage accounts',
     categories: 'Manage categories', export: 'Export data', backup: 'Backup & restore', privacy: 'Privacy',
   };
 
@@ -125,6 +127,29 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
+        {section === 'currency' && CURRENCIES.map((c) => {
+          const selected = c.code === currencyCode;
+          return (
+            <Pressable
+              key={c.code}
+              onPress={async () => {
+                await setSetting('currency', c.code);
+                await setSetting('currency_symbol', c.symbol);
+                setActiveCurrency(c.code);
+                setCurrencyCode(c.code);
+              }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, borderBottomWidth: 0.5, borderBottomColor: colors.surfaceBorder }}
+            >
+              <Text style={{ fontSize: 24 }}>{c.flag}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>{c.name}</Text>
+                <Text style={{ ...typography.bodySmall, color: colors.neutral500 }}>{c.code} · {c.symbol}</Text>
+              </View>
+              {selected && <Feather name="check" size={18} color={colors.accent500} />}
+            </Pressable>
+          );
+        })}
+
         {section === 'theme' && (['light', 'dark', 'system'] as const).map((m) => (
           <Pressable key={m} onPress={() => setMode(m)} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 14, borderBottomWidth: 0.5, borderBottomColor: colors.surfaceBorder }}>
             <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>{m[0].toUpperCase() + m.slice(1)}</Text>
