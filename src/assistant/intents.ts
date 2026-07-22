@@ -89,3 +89,16 @@ export const INTENTS: IntentDef[] = [
 export const STARTER_SUGGESTIONS: Suggestion[] = s('Add Expense', 'Add Income', 'Others');
 
 export const FALLBACK_SUGGESTIONS: Suggestion[] = s('Add Expense', 'Monthly summary', 'What can you do', 'Others');
+
+/**
+ * Reserved value handled by the chat UI itself (not the engine): dismisses the assistant
+ * and returns to Home.
+ */
+export const CLOSE_ACTION = '__close__';
+export const CLOSE_SUGGESTION: Suggestion = { label: 'Close', value: CLOSE_ACTION };
+
+/** Chips shown right after a successful action — same options plus a way out. */
+export const SUCCESS_SUGGESTIONS: Suggestion[] = [
+  ...s('Add Expense', 'Add Income', 'Monthly summary', 'Others'),
+  CLOSE_SUGGESTION,
+];

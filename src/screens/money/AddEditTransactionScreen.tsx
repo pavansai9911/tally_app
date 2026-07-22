@@ -34,7 +34,10 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
   const [occurredAt, setOccurredAt] = useState(todayKey());
   // Time defaults to the current system time for new transactions.
   const [occurredTime, setOccurredTime] = useState(toTimeKey());
-  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  // For a NEW transaction the category list is expanded up front (client request) so the
+  // user can pick straight after typing the amount. Selecting one collapses it; tapping the
+  // row re-opens it. When editing, a category is already set, so it starts collapsed.
+  const [showCategoryPicker, setShowCategoryPicker] = useState(!editId);
   const [showAccountPicker, setShowAccountPicker] = useState(false);
   const [showToAccountPicker, setShowToAccountPicker] = useState(false);
   const [touched, setTouched] = useState(false);
