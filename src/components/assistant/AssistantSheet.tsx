@@ -9,6 +9,7 @@ import { haptic } from '@/utils/haptics';
 import { AssistantAvatar, AssistantAvatarWithStatus } from './AssistantAvatar';
 import { TypingDots } from './TypingDots';
 import { createAssistantEngine, AssistantReply, ChatMessage, Suggestion } from '@/assistant';
+import { CLOSE_ACTION } from '@/assistant/intents';
 
 let seq = 0;
 const nextId = () => `m${Date.now()}_${seq++}`;
@@ -179,6 +180,11 @@ export function AssistantSheet({
   const send = useCallback(
     async (raw: string) => {
       const text = raw.trim();
+      // Reserved UI action: dismiss the assistant rather than asking the engine.
+      if (text === CLOSE_ACTION) {
+        onClose();
+        return;
+      }
       if (!text || busyRef.current) return;
       busyRef.current = true;
       haptic('selection');
@@ -193,7 +199,7 @@ export function AssistantSheet({
         busyRef.current = false;
       }
     },
-    [engine, pushReply],
+    [engine, pushReply, onClose],
   );
 
   const sheetHeight = Math.min(height * 0.82, height - 60);

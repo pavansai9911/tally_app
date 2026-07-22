@@ -11,7 +11,7 @@
 // tool registry as function definitions. The UI is untouched.
 
 import { AssistantEngine, AssistantReply, Suggestion } from './types';
-import { INTENTS, STARTER_SUGGESTIONS, FALLBACK_SUGGESTIONS } from './intents';
+import { INTENTS, STARTER_SUGGESTIONS, FALLBACK_SUGGESTIONS, SUCCESS_SUGGESTIONS } from './intents';
 import { FLOWS, FlowDef, getFlow, promptFor } from './flows';
 import { getTool } from './actions';
 import {
@@ -137,7 +137,7 @@ export class RuleAssistantEngine implements AssistantEngine {
       return this.askCurrentStep([`Got it — ${income ? 'income' : 'expense'} of ${amount} for ${category}.`]);
     }
     const result = await tool.run({ amount: String(amount), category, account: prefilled.account });
-    return { messages: [result], success: true, suggestions: FALLBACK_SUGGESTIONS };
+    return { messages: [result], success: true, suggestions: SUCCESS_SUGGESTIONS };
   }
 
   private async startFlow(flow: FlowDef, rawInput: string): Promise<AssistantReply> {
@@ -217,7 +217,7 @@ export class RuleAssistantEngine implements AssistantEngine {
 
     try {
       const result = await tool.run(slots);
-      return { messages: [...preamble, result], success: true, suggestions: FALLBACK_SUGGESTIONS };
+      return { messages: [...preamble, result], success: true, suggestions: SUCCESS_SUGGESTIONS };
     } catch {
       return { messages: ['Something went wrong saving that — nothing was changed.'], suggestions: FALLBACK_SUGGESTIONS };
     }

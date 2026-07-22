@@ -14,7 +14,9 @@ export function SuccessOverlay({
   visible,
   message = 'Saved',
   onDone,
-  duration = 900,
+  // Long enough that the tick finishes animating (~360ms) and the user registers the
+  // confirmation before it disappears. Previously 900ms, which felt cut off.
+  duration = 2200,
 }: {
   visible: boolean;
   message?: string;
