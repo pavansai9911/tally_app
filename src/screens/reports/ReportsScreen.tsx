@@ -5,6 +5,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { EmptyState } from '@/components/ui';
+import { SwipeTabView } from '@/components/SwipeTabView';
 import { DonutChart, GroupedBarChart, TrendLineChart, Heatmap } from '@/components/charts';
 import { mapIcon } from '@/utils/iconMap';
 import { formatCurrency, monthKey, todayKey, toDateKey, parseDateKey, shortMonthFromKey } from '@/utils/format';
@@ -112,7 +113,8 @@ export default function ReportsScreen({ navigation }: Props) {
         </Pressable>
       </View>
 
-      {tab === 'money' ? (
+      <SwipeTabView index={tab === 'money' ? 0 : 1} onIndexChange={(i) => setTab(i === 0 ? 'money' : 'habits')}>
+        {(
         !hasMoneyData ? (
           <EmptyState icon={<Feather name="bar-chart-2" size={40} color={colors.neutral400} />} title="Not enough data yet" description="Log a few transactions and reports will start showing trends, breakdowns, and insights" />
         ) : (
@@ -170,7 +172,9 @@ export default function ReportsScreen({ navigation }: Props) {
             <TrendLineChart points={balanceSeries} color={colors.accent500} fillColor={colors.accentTint} />
           </ScrollView>
         )
-      ) : !hasHabitsData ? (
+      )}
+        {(
+        !hasHabitsData ? (
         <EmptyState icon={<Feather name="zap" size={40} color={colors.neutral400} />} title="No streaks yet" description="Check in on a habit a few times and your heatmap and stats will start filling in here" />
       ) : (
         <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
@@ -207,7 +211,9 @@ export default function ReportsScreen({ navigation }: Props) {
             </Pressable>
           ))}
         </ScrollView>
+      )
       )}
+      </SwipeTabView>
     </SafeAreaView>
   );
 }

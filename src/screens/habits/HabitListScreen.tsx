@@ -5,6 +5,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { EmptyState } from '@/components/ui';
+import { SwipeTabView } from '@/components/SwipeTabView';
 import { mapIcon } from '@/utils/iconMap';
 import { todayKey } from '@/utils/format';
 import { getTodayHabitsWithStatus, listHabits, upsertLog, deleteLog, calculateStreaks, Habit, HabitLog } from '@/db';
@@ -73,25 +74,25 @@ export default function HabitListScreen({ navigation }: Props) {
         </Pressable>
       </View>
 
-      {tab === 'today' && todayHabits.length > 0 && (
-        <View style={{ paddingHorizontal: 24, paddingBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <View style={{ flex: 1, height: 8, backgroundColor: colors.neutral100, borderRadius: 4, overflow: 'hidden' }}>
-            <View style={{ width: `${(doneCount / todayHabits.length) * 100}%`, height: '100%', backgroundColor: colors.accent500 }} />
-          </View>
-          <Text style={{ ...typography.caption, color: colors.neutral500 }}>{doneCount} of {todayHabits.length} done</Text>
-        </View>
-      )}
-
-      {(tab === 'today' ? todayHabits : allHabits).length === 0 ? (
-        <EmptyState
-          icon={<Feather name="check-square" size={40} color={colors.neutral400} />}
-          title="No habits yet"
-          description="Start building a routine, or break one. Add your first habit to begin tracking streaks"
-          actionLabel="Add habit"
-          onAction={() => navigation.navigate('AddEditHabit', undefined)}
-        />
-      ) : tab === 'today' ? (
+      <SwipeTabView index={tab === 'today' ? 0 : 1} onIndexChange={(i) => setTab(i === 0 ? 'today' : 'all')}>
+        {/* Page 1 — Today */}
+        {todayHabits.length === 0 ? (
+          <EmptyState
+            icon={<Feather name="check-square" size={40} color={colors.neutral400} />}
+            title="No habits yet"
+            description="Start building a routine, or break one. Add your first habit to begin tracking streaks"
+            actionLabel="Add habit"
+            onAction={() => navigation.navigate('AddEditHabit', undefined)}
+          />
+        ) : (
         <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 100 }}>
+          {/* Daily progress lives inside the page so it doesn't flicker while swiping. */}
+          <View style={{ paddingBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View style={{ flex: 1, height: 8, backgroundColor: colors.neutral100, borderRadius: 4, overflow: 'hidden' }}>
+              <View style={{ width: `${(doneCount / todayHabits.length) * 100}%`, height: '100%', backgroundColor: colors.accent500 }} />
+            </View>
+            <Text style={{ ...typography.caption, color: colors.neutral500 }}>{doneCount} of {todayHabits.length} done</Text>
+          </View>
           {todayHabits.map(h => {
             const done = h.log?.status === 'done';
             return (
@@ -119,7 +120,18 @@ export default function HabitListScreen({ navigation }: Props) {
             );
           })}
         </ScrollView>
-      ) : (
+        )}
+
+        {/* Page 2 — All habits */}
+        {allHabits.length === 0 ? (
+          <EmptyState
+            icon={<Feather name="check-square" size={40} color={colors.neutral400} />}
+            title="No habits yet"
+            description="Start building a routine, or break one. Add your first habit to begin tracking streaks"
+            actionLabel="Add habit"
+            onAction={() => navigation.navigate('AddEditHabit', undefined)}
+          />
+        ) : (
         <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 100 }}>
           {['build', 'quit'].map(group => {
             const items = allHabits.filter(h => h.type === group);
@@ -149,7 +161,8 @@ export default function HabitListScreen({ navigation }: Props) {
             );
           })}
         </ScrollView>
-      )}
+        )}
+      </SwipeTabView>
 
       <Pressable
         onPress={() => navigation.navigate('AddEditHabit', undefined)}

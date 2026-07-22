@@ -5,6 +5,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { SegmentOption } from '@/components/ui';
 import { DateField } from '@/components/DateTimeField';
+import { SwipeTabView } from '@/components/SwipeTabView';
 import { mapIcon } from '@/utils/iconMap';
 import {
   createTransaction, updateTransaction, getTransaction, listCategories, listAccounts,
@@ -120,6 +121,87 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
         : 'Pick a category'
     : null;
 
+  // One page of the swipeable type pager. Expense/Income show a category; Transfer swaps
+  // that for a destination account. Field state is shared, so switching keeps what applies.
+  function renderForm(pageType: 'expense' | 'income' | 'transfer') {
+    return (
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 20 }} keyboardShouldPersistTaps="handled">
+        {pageType !== 'transfer' && (
+          <>
+            <Pressable onPress={() => setShowCategoryPicker((s) => !s)} style={rowStyle(colors)}>
+              <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>Category</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={{ ...typography.bodyMedium, fontWeight: '600', color: selectedCategory ? colors.neutral900 : colors.neutral400 }}>{selectedCategory?.name ?? 'Select category'}</Text>
+                <Feather name="chevron-right" size={16} color={colors.neutral400} />
+              </View>
+            </Pressable>
+            {showCategoryPicker && (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingVertical: 10 }}>
+                {categories.map((c) => (
+                  <Pressable key={c.id} onPress={() => { setCategoryId(c.id); setShowCategoryPicker(false); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 10, borderRadius: radius.md, backgroundColor: c.id === categoryId ? colors.accentTint : colors.surfaceSunken }}>
+                    <Feather name={mapIcon(c.icon)} size={15} color={c.color} />
+                    <Text style={{ ...typography.bodySmall, color: colors.neutral900 }}>{c.name}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </>
+        )}
+
+        <Pressable onPress={() => setShowAccountPicker((s) => !s)} style={rowStyle(colors)}>
+          <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>{pageType === 'transfer' ? 'From account' : 'Account'}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={{ ...typography.bodyMedium, fontWeight: '600', color: colors.neutral900 }}>{selectedAccount?.name ?? 'Select account'}</Text>
+            <Feather name="chevron-right" size={16} color={colors.neutral400} />
+          </View>
+        </Pressable>
+        {showAccountPicker && (
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingVertical: 10 }}>
+            {accounts.map((a) => (
+              <Pressable key={a.id} onPress={() => { setAccountId(a.id); setShowAccountPicker(false); }} style={{ padding: 10, borderRadius: radius.md, backgroundColor: a.id === accountId ? colors.accentTint : colors.surfaceSunken }}>
+                <Text style={{ ...typography.bodySmall, color: colors.neutral900 }}>{a.name}</Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
+
+        {pageType === 'transfer' && (
+          <>
+            <Pressable onPress={() => setShowToAccountPicker((s) => !s)} style={rowStyle(colors)}>
+              <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>To account</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={{ ...typography.bodyMedium, fontWeight: '600', color: colors.neutral900 }}>{selectedToAccount?.name ?? 'Select account'}</Text>
+                <Feather name="chevron-right" size={16} color={colors.neutral400} />
+              </View>
+            </Pressable>
+            {showToAccountPicker && (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingVertical: 10 }}>
+                {accounts.filter((a) => a.id !== accountId).map((a) => (
+                  <Pressable key={a.id} onPress={() => { setToAccountId(a.id); setShowToAccountPicker(false); }} style={{ padding: 10, borderRadius: radius.md, backgroundColor: a.id === toAccountId ? colors.accentTint : colors.surfaceSunken }}>
+                    <Text style={{ ...typography.bodySmall, color: colors.neutral900 }}>{a.name}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </>
+        )}
+
+        <DateField label="Date" value={occurredAt} onChange={setOccurredAt} maximumDate={new Date(2100, 0, 1)} />
+
+        <View style={{ paddingVertical: 14 }}>
+          <Text style={{ ...typography.bodyMedium, color: colors.neutral900, marginBottom: 8 }}>Note</Text>
+          <TextInput
+            value={note}
+            onChangeText={setNote}
+            placeholder="Add a note (optional)"
+            placeholderTextColor={colors.neutral400}
+            style={{ ...typography.body, color: colors.neutral900, backgroundColor: colors.surfaceSunken, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 12 }}
+          />
+        </View>
+      </ScrollView>
+    );
+  }
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.neutral0 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8 }}>
@@ -167,80 +249,14 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
         )}
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 20 }} keyboardShouldPersistTaps="handled">
-        {type !== 'transfer' && (
-          <>
-            <Pressable onPress={() => setShowCategoryPicker((s) => !s)} style={rowStyle(colors)}>
-              <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>Category</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={{ ...typography.bodyMedium, fontWeight: '600', color: selectedCategory ? colors.neutral900 : colors.neutral400 }}>{selectedCategory?.name ?? 'Select category'}</Text>
-                <Feather name="chevron-right" size={16} color={colors.neutral400} />
-              </View>
-            </Pressable>
-            {showCategoryPicker && (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingVertical: 10 }}>
-                {categories.map((c) => (
-                  <Pressable key={c.id} onPress={() => { setCategoryId(c.id); setShowCategoryPicker(false); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, padding: 10, borderRadius: radius.md, backgroundColor: c.id === categoryId ? colors.accentTint : colors.surfaceSunken }}>
-                    <Feather name={mapIcon(c.icon)} size={15} color={c.color} />
-                    <Text style={{ ...typography.bodySmall, color: colors.neutral900 }}>{c.name}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            )}
-          </>
-        )}
-
-        <Pressable onPress={() => setShowAccountPicker((s) => !s)} style={rowStyle(colors)}>
-          <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>{type === 'transfer' ? 'From account' : 'Account'}</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Text style={{ ...typography.bodyMedium, fontWeight: '600', color: colors.neutral900 }}>{selectedAccount?.name ?? 'Select account'}</Text>
-            <Feather name="chevron-right" size={16} color={colors.neutral400} />
-          </View>
-        </Pressable>
-        {showAccountPicker && (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingVertical: 10 }}>
-            {accounts.map((a) => (
-              <Pressable key={a.id} onPress={() => { setAccountId(a.id); setShowAccountPicker(false); }} style={{ padding: 10, borderRadius: radius.md, backgroundColor: a.id === accountId ? colors.accentTint : colors.surfaceSunken }}>
-                <Text style={{ ...typography.bodySmall, color: colors.neutral900 }}>{a.name}</Text>
-              </Pressable>
-            ))}
-          </View>
-        )}
-
-        {type === 'transfer' && (
-          <>
-            <Pressable onPress={() => setShowToAccountPicker((s) => !s)} style={rowStyle(colors)}>
-              <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>To account</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={{ ...typography.bodyMedium, fontWeight: '600', color: colors.neutral900 }}>{selectedToAccount?.name ?? 'Select account'}</Text>
-                <Feather name="chevron-right" size={16} color={colors.neutral400} />
-              </View>
-            </Pressable>
-            {showToAccountPicker && (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingVertical: 10 }}>
-                {accounts.filter((a) => a.id !== accountId).map((a) => (
-                  <Pressable key={a.id} onPress={() => { setToAccountId(a.id); setShowToAccountPicker(false); }} style={{ padding: 10, borderRadius: radius.md, backgroundColor: a.id === toAccountId ? colors.accentTint : colors.surfaceSunken }}>
-                    <Text style={{ ...typography.bodySmall, color: colors.neutral900 }}>{a.name}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            )}
-          </>
-        )}
-
-        <DateField label="Date" value={occurredAt} onChange={setOccurredAt} maximumDate={new Date(2100, 0, 1)} />
-
-        <View style={{ paddingVertical: 14 }}>
-          <Text style={{ ...typography.bodyMedium, color: colors.neutral900, marginBottom: 8 }}>Note</Text>
-          <TextInput
-            value={note}
-            onChangeText={setNote}
-            placeholder="Add a note (optional)"
-            placeholderTextColor={colors.neutral400}
-            style={{ ...typography.body, color: colors.neutral900, backgroundColor: colors.surfaceSunken, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 12 }}
-          />
-        </View>
-      </ScrollView>
+      <SwipeTabView
+        index={type === 'expense' ? 0 : type === 'income' ? 1 : 2}
+        onIndexChange={(i) => setType(i === 0 ? 'expense' : i === 1 ? 'income' : 'transfer')}
+      >
+        {renderForm('expense')}
+        {renderForm('income')}
+        {renderForm('transfer')}
+      </SwipeTabView>
 
       <View style={{ borderTopWidth: 0.5, borderTopColor: colors.surfaceBorder }}>
         <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 14 }}>
