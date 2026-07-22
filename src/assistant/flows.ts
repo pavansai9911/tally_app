@@ -27,6 +27,11 @@ export interface FlowDef {
   tool: string;
   intro?: string;
   steps: FlowStep[];
+  /**
+   * Slots resolved before the conversation starts. Used to skip questions that have only
+   * one sensible answer (e.g. don't ask "which account?" when there is only one).
+   */
+  prefill?: () => Promise<Record<string, string>>;
 }
 
 const amountParser = (input: string): string | null => {
@@ -45,6 +50,12 @@ async function accountChips(): Promise<Suggestion[]> {
   return accounts.slice(0, 5).map((a) => ({ label: a.name }));
 }
 
+/** Only ask which account when the user actually has a choice. */
+async function singleAccountPrefill(slot: string): Promise<Record<string, string>> {
+  const accounts = await listAccounts();
+  return accounts.length === 1 ? { [slot]: accounts[0].name } : {};
+}
+
 async function habitChips(): Promise<Suggestion[]> {
   const habits = await listHabits();
   return habits.slice(0, 6).map((h) => ({ label: h.name }));
@@ -54,18 +65,22 @@ export const FLOWS: FlowDef[] = [
   {
     id: 'add_expense',
     tool: 'add_expense',
+    prefill: () => singleAccountPrefill('account'),
     steps: [
       { slot: 'category', prompt: 'Which category?', suggestions: () => categoryChips('expense') },
       { slot: 'amount', prompt: (s) => `How much did you spend on ${s.category}?`, parse: amountParser, invalid: "I didn't catch a number there — how much was it?" },
+      { slot: 'account', prompt: 'Which account should this be deducted from?', suggestions: accountChips },
       { slot: 'note', prompt: 'Any note? (or tap Skip)', suggestions: async () => [{ label: 'Skip' }], optional: true },
     ],
   },
   {
     id: 'add_income',
     tool: 'add_income',
+    prefill: () => singleAccountPrefill('account'),
     steps: [
       { slot: 'category', prompt: 'What kind of income?', suggestions: () => categoryChips('income') },
       { slot: 'amount', prompt: 'How much did you receive?', parse: amountParser, invalid: "I didn't catch a number — how much was it?" },
+      { slot: 'account', prompt: 'Which account should this be added to?', suggestions: accountChips },
       { slot: 'note', prompt: 'Any note? (or tap Skip)', suggestions: async () => [{ label: 'Skip' }], optional: true },
     ],
   },

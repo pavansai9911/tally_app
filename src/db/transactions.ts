@@ -95,6 +95,26 @@ export async function getMonthSummary(monthKey: string): Promise<MonthSummary> {
   return { income, expense, net: income - expense };
 }
 
+/** Total expense for a single day (occurred_at is 'YYYY-MM-DD HH:MM'). */
+export async function getExpenseTotalForDay(dayKey: string): Promise<number> {
+  const db = await getDb();
+  const row = await db.getFirstAsync<{ total: number }>(
+    "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE type = 'expense' AND occurred_at LIKE ? || '%'",
+    [dayKey],
+  );
+  return row?.total ?? 0;
+}
+
+/** Total expense from a date (inclusive) onwards. */
+export async function getExpenseTotalSince(startKey: string): Promise<number> {
+  const db = await getDb();
+  const row = await db.getFirstAsync<{ total: number }>(
+    "SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE type = 'expense' AND occurred_at >= ?",
+    [startKey],
+  );
+  return row?.total ?? 0;
+}
+
 export interface CategoryBreakdown {
   category_id: string;
   category_name: string;

@@ -175,7 +175,8 @@ export default function DashboardScreen() {
       <AssistantFab onPress={() => setAssistantOpen(true)} />
       <AssistantSheet
         visible={assistantOpen}
-        onClose={() => setAssistantOpen(false)}
+        onClose={() => { setAssistantOpen(false); load(); }}
+        onDataChanged={load}
         onNavigate={(target) => {
           // Dynamic tab/screen hand-off from the assistant; the shape is validated by
           // AssistantNavigation, so a loose cast here is safe and keeps the types simple.

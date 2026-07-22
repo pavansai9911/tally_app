@@ -121,18 +121,27 @@ export class RuleAssistantEngine implements AssistantEngine {
     // Without a category we still need one — pre-fill the amount and ask.
     if (!category) {
       const flow = getFlow(income ? 'add_income' : 'add_expense')!;
-      this.active = { flow, stepIndex: 0, slots: { amount: String(amount) } };
+      const slots = flow.prefill ? await flow.prefill() : {};
+      slots.amount = String(amount);
+      this.active = { flow, stepIndex: 0, slots };
       return this.askCurrentStep([
         `Got it — ${income ? 'income' : 'expense'} of ${amount}.`,
       ]);
     }
 
-    const result = await tool.run({ amount: String(amount), category });
+    const flow = getFlow(income ? 'add_income' : 'add_expense')!;
+    const prefilled = flow.prefill ? await flow.prefill() : {};
+    // With multiple accounts we must ask which one — never guess where money moves.
+    if (!prefilled.account) {
+      this.active = { flow, stepIndex: 0, slots: { amount: String(amount), category } };
+      return this.askCurrentStep([`Got it — ${income ? 'income' : 'expense'} of ${amount} for ${category}.`]);
+    }
+    const result = await tool.run({ amount: String(amount), category, account: prefilled.account });
     return { messages: [result], success: true, suggestions: FALLBACK_SUGGESTIONS };
   }
 
   private async startFlow(flow: FlowDef, rawInput: string): Promise<AssistantReply> {
-    const slots: Record<string, string> = {};
+    const slots: Record<string, string> = flow.prefill ? await flow.prefill() : {};
 
     // Seed slots we can already infer from the opening sentence.
     const amount = extractAmount(rawInput);

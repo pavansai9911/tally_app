@@ -7,8 +7,8 @@
 import {
   createTransaction, listAccounts, listCategories, createCategory, createAccount,
   getMonthSummary, getExpenseBreakdownByCategory, listTransactions, listBudgetsWithSpend,
-  createBudget, createHabit, listHabits, upsertLog, getTodayHabitsWithStatus,
-  calculateStreaks,
+  createBudget, updateBudget, getBudgetByCategory, createHabit, listHabits, upsertLog,
+  getTodayHabitsWithStatus, calculateStreaks, getExpenseTotalForDay, getExpenseTotalSince,
 } from '@/db';
 import { AssistantTool } from './types';
 import { formatCurrency, monthKey, todayKey, toTimeKey, toTimestamp, addDaysKey } from '@/utils/format';
@@ -67,7 +67,7 @@ export const addExpense: AssistantTool = {
       occurred_at: nowStamp(),
       recurring_id: null,
     });
-    return `Done — ${formatCurrency(amount)} expense saved${category ? ` under ${category.name}` : ''} in ${account.name}.`;
+    return `Done ✅ ${formatCurrency(amount)} expense${category ? ` under ${category.name}` : ''} deducted from ${account.name}.`;
   },
 };
 
@@ -100,7 +100,7 @@ export const addIncome: AssistantTool = {
       occurred_at: nowStamp(),
       recurring_id: null,
     });
-    return `Nice — ${formatCurrency(amount)} income recorded${category ? ` as ${category.name}` : ''} in ${account.name}.`;
+    return `Done ✅ ${formatCurrency(amount)} income${category ? ` as ${category.name}` : ''} added to ${account.name}.`;
   },
 };
 
@@ -149,6 +149,13 @@ export const createBudgetTool: AssistantTool = {
     if (!category) {
       const id = await createCategory({ name: args.category, type: 'expense', icon: 'ti-dots', color: '#6B7280' });
       category = { id, name: args.category, type: 'expense', icon: 'ti-dots', color: '#6B7280', archived: 0 };
+    }
+    // A category holds at most one budget: update the existing one rather than
+    // creating a duplicate (which would double-count in reports).
+    const existing = await getBudgetByCategory(category.id);
+    if (existing) {
+      await updateBudget(existing.id, { monthly_limit: amount });
+      return `Updated the ${category.name} budget from ${formatCurrency(existing.monthly_limit)} to ${formatCurrency(amount)} a month.`;
     }
     await createBudget({
       category_id: category.id,
@@ -267,9 +274,7 @@ export const todayExpense: AssistantTool = {
   description: "Total spent today",
   parameters: [],
   async run() {
-    const all = await listTransactions();
-    const today = todayKey();
-    const sum = all.filter((t) => t.type === 'expense' && t.occurred_at.startsWith(today)).reduce((s, t) => s + t.amount, 0);
+    const sum = await getExpenseTotalForDay(todayKey());
     return sum === 0 ? "You haven't spent anything today." : `You've spent ${formatCurrency(sum)} today.`;
   },
 };
@@ -279,12 +284,8 @@ export const weeklyExpense: AssistantTool = {
   description: 'Total spent over the last 7 days',
   parameters: [],
   async run() {
-    const all = await listTransactions();
-    const from = addDaysKey(todayKey(), -6);
-    const sum = all
-      .filter((t) => t.type === 'expense' && t.occurred_at.slice(0, 10) >= from)
-      .reduce((s, t) => s + t.amount, 0);
-    return sum === 0 ? "No spending in the last 7 days." : `You've spent ${formatCurrency(sum)} in the last 7 days.`;
+    const sum = await getExpenseTotalSince(addDaysKey(todayKey(), -6));
+    return sum === 0 ? 'No spending in the last 7 days.' : `You've spent ${formatCurrency(sum)} in the last 7 days.`;
   },
 };
 

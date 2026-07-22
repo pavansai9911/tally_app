@@ -99,10 +99,13 @@ export function AssistantSheet({
   visible,
   onClose,
   onNavigate,
+  onDataChanged,
 }: {
   visible: boolean;
   onClose: () => void;
   onNavigate?: (target: { tab: string; screen?: string; params?: Record<string, unknown> }) => void;
+  /** Fired after the assistant writes data, so the host screen can refresh. */
+  onDataChanged?: () => void;
 }) {
   const { colors, typography, radius } = useTheme();
   const { height } = useWindowDimensions();
@@ -116,6 +119,8 @@ export function AssistantSheet({
   const [navLabel, setNavLabel] = useState<string>('Open');
 
   const scrollRef = useRef<ScrollView>(null);
+  // Guards the window between sending and the reply starting, where `pending` is still false.
+  const busyRef = useRef(false);
   const slide = useRef(new Animated.Value(0)).current;
 
   // Sheet enter / exit
@@ -142,18 +147,31 @@ export function AssistantSheet({
       ]);
       await new Promise<void>((resolve) => { setTimeout(() => resolve(), 120); });
     }
-    if (reply.success) haptic('notificationSuccess');
+    if (reply.success) {
+      haptic('notificationSuccess');
+      // The assistant just wrote to the database — refresh the screen behind the sheet.
+      onDataChanged?.();
+    }
     setSuggestions(reply.suggestions ?? []);
     if (reply.navigate) {
       setNav(reply.navigate);
       setNavLabel(reply.navigateLabel ?? 'Open');
     }
-  }, []);
+  }, [onDataChanged]);
 
-  // Greet on first open; keep history for the rest of the session.
+  // Every open starts a fresh conversation.
   useEffect(() => {
-    if (visible && messages.length === 0) {
+    if (visible) {
       engine.greet().then(pushReply);
+    } else {
+      // Clear history and abandon any half-finished flow so reopening starts clean.
+      engine.reset();
+      setMessages([]);
+      setSuggestions([]);
+      setNav(null);
+      setInput('');
+      setPending(false);
+      busyRef.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
@@ -161,29 +179,35 @@ export function AssistantSheet({
   const send = useCallback(
     async (raw: string) => {
       const text = raw.trim();
-      if (!text || pending) return;
+      if (!text || busyRef.current) return;
+      busyRef.current = true;
       haptic('selection');
       setInput('');
       setSuggestions([]);
       setNav(null);
       setMessages((prev) => [...prev, { id: nextId(), role: 'user', text, createdAt: Date.now() }]);
-      const reply = await engine.respond(text);
-      await pushReply(reply);
+      try {
+        const reply = await engine.respond(text);
+        await pushReply(reply);
+      } finally {
+        busyRef.current = false;
+      }
     },
-    [engine, pending, pushReply],
+    [engine, pushReply],
   );
 
   const sheetHeight = Math.min(height * 0.82, height - 60);
 
   return (
-    <Modal transparent visible={visible} animationType="none" onRequestClose={onClose} statusBarTranslucent>
+    <Modal transparent visible={visible} animationType="none" onRequestClose={onClose}>
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         {/* Scrim — Home stays visible behind it */}
         <Animated.View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: colors.surfaceOverlay, opacity: slide }}>
           <Pressable style={{ flex: 1 }} onPress={onClose} accessibilityLabel="Close assistant" />
         </Animated.View>
 
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        {/* 'padding' on both platforms: inside a Modal, Android does not resize reliably. */}
+        <KeyboardAvoidingView behavior="padding">
           <Animated.View
             style={{
               height: sheetHeight,
@@ -246,16 +270,11 @@ export function AssistantSheet({
 
             {/* Suggestion chips */}
             {suggestions.length > 0 && !pending && (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 10, gap: 8 }}
-                keyboardShouldPersistTaps="handled"
-              >
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingBottom: 10 }}>
                 {suggestions.map((sg, i) => (
                   <Chip key={`${sg.label}-${i}`} index={i} label={sg.label} onPress={() => send(sg.value ?? sg.label)} />
                 ))}
-              </ScrollView>
+              </View>
             )}
 
             {/* Composer */}
