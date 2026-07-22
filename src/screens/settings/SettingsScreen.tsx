@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, SafeAreaView, ScrollView, Pressable } from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, Pressable, Alert } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -7,6 +7,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { ToggleSwitch } from '@/components/ui';
 import {
   isPinSet, clearPin, isBiometricAvailable, isBiometricEnabled, setBiometricEnabled,
+  authenticateBiometric,
 } from '@/services/lock';
 import VerifyPinScreen from '@/screens/lock/VerifyPinScreen';
 import { RootStackParamList } from '@/navigation/RootNavigator';
@@ -46,6 +47,19 @@ export default function SettingsScreen({ navigation }: Props) {
   }
 
   async function toggleBiometric(v: boolean) {
+    // Security: both enabling AND disabling biometric unlock require a successful
+    // fingerprint scan, so nobody can change it while the phone is briefly unattended.
+    const ok = await authenticateBiometric(
+      v ? 'Confirm your fingerprint to enable biometric unlock'
+        : 'Confirm your fingerprint to turn off biometric unlock',
+    );
+    if (!ok) {
+      Alert.alert(
+        'Not confirmed',
+        v ? 'Biometric unlock was not enabled.' : 'Biometric unlock was not turned off.',
+      );
+      return;
+    }
     setBiometricOn(v);
     await setBiometricEnabled(v);
   }

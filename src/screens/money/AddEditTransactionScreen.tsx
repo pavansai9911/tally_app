@@ -21,7 +21,7 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
   const editId = route.params?.id;
 
   const [type, setType] = useState<'expense' | 'income' | 'transfer'>('expense');
-  const [amount, setAmount] = useState('0');
+  const [amount, setAmount] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<AccountWithBalance[]>([]);
   const [categoryId, setCategoryId] = useState<string | null>(null);
@@ -73,18 +73,14 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
   const categoryValid = type === 'transfer' || !!categoryId;
   const isValid = amountValid && categoryValid && !!accountId && transferValid;
 
-  function handleKeypad(key: string) {
-    haptic('selection');
-    if (key === 'back') {
-      setAmount((prev) => (prev.length > 1 ? prev.slice(0, -1) : '0'));
-      return;
+  // Native numeric keyboard input: allow only digits and a single decimal point.
+  function handleAmountChange(text: string) {
+    let cleaned = text.replace(/[^0-9.]/g, '');
+    const firstDot = cleaned.indexOf('.');
+    if (firstDot !== -1) {
+      cleaned = cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, '');
     }
-    if (key === '.') {
-      if (amount.includes('.')) return;
-      setAmount((prev) => prev + '.');
-      return;
-    }
-    setAmount((prev) => (prev === '0' ? key : prev + key));
+    setAmount(cleaned);
   }
 
   async function handleSave() {
@@ -140,9 +136,26 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
       </View>
 
       <View style={{ alignItems: 'center', paddingVertical: 16 }}>
-        <Text style={{ fontSize: 40, fontWeight: '700', color: errorMsg && !amountValid ? colors.expense : colors.neutral900 }}>
-          ₹{amount}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ fontSize: 40, fontWeight: '700', color: errorMsg && !amountValid ? colors.expense : colors.neutral900 }}>₹</Text>
+          <TextInput
+            value={amount}
+            onChangeText={handleAmountChange}
+            keyboardType="decimal-pad"
+            autoFocus
+            placeholder="0"
+            placeholderTextColor={colors.neutral300}
+            accessibilityLabel="Amount"
+            style={{
+              fontSize: 40,
+              fontWeight: '700',
+              color: errorMsg && !amountValid ? colors.expense : colors.neutral900,
+              minWidth: 90,
+              maxWidth: 240,
+              paddingVertical: 0,
+            }}
+          />
+        </View>
         {errorMsg && (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
             <Feather name="alert-circle" size={14} color={colors.expense} />
@@ -227,23 +240,7 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
       </ScrollView>
 
       <View style={{ borderTopWidth: 0.5, borderTopColor: colors.surfaceBorder }}>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-          {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'back'].map((key) => (
-            <Pressable
-              key={key}
-              onPress={() => handleKeypad(key)}
-              accessibilityLabel={key === 'back' ? 'Delete digit' : `Digit ${key}`}
-              style={({ pressed }) => ({ width: '33.33%', paddingVertical: 14, alignItems: 'center', opacity: pressed ? 0.5 : 1 })}
-            >
-              {key === 'back' ? (
-                <Feather name="delete" size={20} color={colors.neutral900} />
-              ) : (
-                <Text style={{ fontSize: 22, color: colors.neutral900 }}>{key}</Text>
-              )}
-            </Pressable>
-          ))}
-        </View>
-        <View style={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 14 }}>
+        <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 14 }}>
           <Pressable
             onPress={handleSave}
             accessibilityRole="button"
