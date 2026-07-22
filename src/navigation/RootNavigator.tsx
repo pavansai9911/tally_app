@@ -70,6 +70,16 @@ export type RootStackParamList = {
   SettingsSub: { section: string };
 };
 
+// Shared page-transition options: screens slide in from the right, modals from the bottom.
+// Native-stack animations run on the UI thread, so they stay smooth under load.
+const stackScreenOptions = {
+  headerShown: false,
+  animation: 'slide_from_right',
+  animationDuration: 260,
+} as const;
+
+const modalOptions = { presentation: 'modal', animation: 'slide_from_bottom' } as const;
+
 const MoneyStack = createNativeStackNavigator<MoneyStackParamList>();
 const HabitsStack = createNativeStackNavigator<HabitsStackParamList>();
 const ReportsStack = createNativeStackNavigator<ReportsStackParamList>();
@@ -78,29 +88,29 @@ const Tabs = createBottomTabNavigator();
 
 function MoneyNavigator() {
   return (
-    <MoneyStack.Navigator screenOptions={{ headerShown: false }}>
+    <MoneyStack.Navigator screenOptions={stackScreenOptions}>
       <MoneyStack.Screen name="TransactionList" component={TransactionListScreen} />
-      <MoneyStack.Screen name="AddEditTransaction" component={AddEditTransactionScreen} options={{ presentation: 'modal' }} />
+      <MoneyStack.Screen name="AddEditTransaction" component={AddEditTransactionScreen} options={modalOptions} />
       <MoneyStack.Screen name="TransactionDetail" component={TransactionDetailScreen} />
       <MoneyStack.Screen name="AccountsList" component={AccountsListScreen} />
-      <MoneyStack.Screen name="AddEditAccount" component={AddEditAccountScreen} options={{ presentation: 'modal' }} />
+      <MoneyStack.Screen name="AddEditAccount" component={AddEditAccountScreen} options={modalOptions} />
       <MoneyStack.Screen name="AccountDetail" component={AccountDetailScreen} />
       <MoneyStack.Screen name="BudgetsList" component={BudgetsListScreen} />
-      <MoneyStack.Screen name="AddEditBudget" component={AddEditBudgetScreen} options={{ presentation: 'modal' }} />
+      <MoneyStack.Screen name="AddEditBudget" component={AddEditBudgetScreen} options={modalOptions} />
       <MoneyStack.Screen name="BudgetDetail" component={BudgetDetailScreen} />
       <MoneyStack.Screen name="CategoriesList" component={CategoriesListScreen} />
-      <MoneyStack.Screen name="AddEditCategory" component={AddEditCategoryScreen} options={{ presentation: 'modal' }} />
+      <MoneyStack.Screen name="AddEditCategory" component={AddEditCategoryScreen} options={modalOptions} />
       <MoneyStack.Screen name="RecurringList" component={RecurringListScreen} />
-      <MoneyStack.Screen name="AddEditRecurring" component={AddEditRecurringScreen} options={{ presentation: 'modal' }} />
+      <MoneyStack.Screen name="AddEditRecurring" component={AddEditRecurringScreen} options={modalOptions} />
     </MoneyStack.Navigator>
   );
 }
 
 function HabitsNavigator() {
   return (
-    <HabitsStack.Navigator screenOptions={{ headerShown: false }}>
+    <HabitsStack.Navigator screenOptions={stackScreenOptions}>
       <HabitsStack.Screen name="HabitList" component={HabitListScreen} />
-      <HabitsStack.Screen name="AddEditHabit" component={AddEditHabitScreen} options={{ presentation: 'modal' }} />
+      <HabitsStack.Screen name="AddEditHabit" component={AddEditHabitScreen} options={modalOptions} />
       <HabitsStack.Screen name="HabitDetail" component={HabitDetailScreen} />
     </HabitsStack.Navigator>
   );
@@ -108,7 +118,7 @@ function HabitsNavigator() {
 
 function ReportsNavigator() {
   return (
-    <ReportsStack.Navigator screenOptions={{ headerShown: false }}>
+    <ReportsStack.Navigator screenOptions={stackScreenOptions}>
       <ReportsStack.Screen name="Reports" component={ReportsScreen} />
       <ReportsStack.Screen name="CategoryDrilldown" component={CategoryDrilldownScreen} />
       <ReportsStack.Screen name="SingleHabitReport" component={SingleHabitReportScreen} />
@@ -122,6 +132,7 @@ function MainTabs() {
     <Tabs.Navigator
       screenOptions={{
         headerShown: false,
+        animation: 'fade',
         tabBarActiveTintColor: colors.accent500,
         tabBarInactiveTintColor: colors.neutral400,
         tabBarStyle: {
@@ -138,9 +149,20 @@ function MainTabs() {
       <Tabs.Screen name="Home" component={DashboardScreen} options={{
         tabBarIcon: ({ color, size }) => <Feather name="home" size={21} color={color} />,
       }} />
-      <Tabs.Screen name="Money" component={MoneyNavigator} options={{
-        tabBarIcon: ({ color, size }) => <Feather name="credit-card" size={21} color={color} />,
-      }} />
+      <Tabs.Screen
+        name="Money"
+        component={MoneyNavigator}
+        options={{
+          tabBarIcon: ({ color, size }) => <Feather name="credit-card" size={21} color={color} />,
+        }}
+        listeners={({ navigation: tabNav }) => ({
+          // Tapping the Money tab always lands on Transactions. Without this the stack keeps
+          // whatever inner screen was last open (e.g. Accounts, reached from the Home hero).
+          tabPress: () => {
+            tabNav.navigate('Money', { screen: 'TransactionList' });
+          },
+        })}
+      />
       <Tabs.Screen name="Habits" component={HabitsNavigator} options={{
         tabBarIcon: ({ color, size }) => <Feather name="check-square" size={21} color={color} />,
       }} />
@@ -153,7 +175,7 @@ function MainTabs() {
 
 export function RootNavigator() {
   return (
-    <RootStack.Navigator screenOptions={{ headerShown: false }}>
+    <RootStack.Navigator screenOptions={stackScreenOptions}>
       <RootStack.Screen name="Tabs" component={MainTabs} />
       <RootStack.Screen name="Settings" component={SettingsScreen} />
       <RootStack.Screen name="SettingsSub" component={SettingsSubScreen} />

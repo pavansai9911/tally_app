@@ -4,6 +4,7 @@ import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Button, Input, ToggleSwitch } from '@/components/ui';
+import { SuccessOverlay } from '@/components/SuccessOverlay';
 import { createAccount, updateAccount, getAccount } from '@/db';
 import { MoneyStackParamList } from '@/navigation/RootNavigator';
 
@@ -24,6 +25,7 @@ export default function AddEditAccountScreen({ navigation, route }: Props) {
   const [type, setType] = useState<'cash' | 'bank' | 'card' | 'wallet'>('bank');
   const [balance, setBalance] = useState('0');
   const [includeInTotal, setIncludeInTotal] = useState(true);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     if (editId) {
@@ -49,11 +51,16 @@ export default function AddEditAccountScreen({ navigation, route }: Props) {
     };
     if (editId) await updateAccount(editId, payload);
     else await createAccount(payload);
-    navigation.goBack();
+    setSaved(true);
   }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }}>
+      <SuccessOverlay
+        visible={saved}
+        message={editId ? 'Account updated' : 'Account created'}
+        onDone={() => { setSaved(false); navigation.goBack(); }}
+      />
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 }}>
         <Pressable onPress={() => navigation.goBack()}><Feather name="x" size={22} color={colors.neutral900} /></Pressable>
         <Text style={{ ...typography.h3, color: colors.neutral900 }}>{editId ? 'Edit account' : 'New account'}</Text>

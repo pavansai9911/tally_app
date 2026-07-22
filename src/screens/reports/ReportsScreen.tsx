@@ -5,6 +5,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { EmptyState } from '@/components/ui';
+import { SwipeTabView } from '@/components/SwipeTabView';
+import { FadeInView } from '@/components/SuccessOverlay';
 import { DonutChart, GroupedBarChart, TrendLineChart, Heatmap } from '@/components/charts';
 import { mapIcon } from '@/utils/iconMap';
 import { formatCurrency, monthKey, todayKey, toDateKey, parseDateKey, shortMonthFromKey } from '@/utils/format';
@@ -112,11 +114,13 @@ export default function ReportsScreen({ navigation }: Props) {
         </Pressable>
       </View>
 
-      {tab === 'money' ? (
+      <SwipeTabView index={tab === 'money' ? 0 : 1} onIndexChange={(i) => setTab(i === 0 ? 'money' : 'habits')}>
+        {(
         !hasMoneyData ? (
           <EmptyState icon={<Feather name="bar-chart-2" size={40} color={colors.neutral400} />} title="Not enough data yet" description="Log a few transactions and reports will start showing trends, breakdowns, and insights" />
         ) : (
           <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
+            <FadeInView trigger={`money-${summary.income}-${summary.expense}`}>
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 18 }}>
               <SummaryTile label="Income" value={formatCurrency(summary.income)} bg={colors.incomeTint} fg={colors.income} />
               <SummaryTile label="Expense" value={formatCurrency(summary.expense)} bg={colors.expenseTint} fg={colors.expense} />
@@ -168,12 +172,16 @@ export default function ReportsScreen({ navigation }: Props) {
 
             <Text style={{ ...typography.h2, color: colors.neutral900, marginBottom: 6 }}>Balance trend</Text>
             <TrendLineChart points={balanceSeries} color={colors.accent500} fillColor={colors.accentTint} />
+            </FadeInView>
           </ScrollView>
         )
-      ) : !hasHabitsData ? (
+      )}
+        {(
+        !hasHabitsData ? (
         <EmptyState icon={<Feather name="zap" size={40} color={colors.neutral400} />} title="No streaks yet" description="Check in on a habit a few times and your heatmap and stats will start filling in here" />
       ) : (
         <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
+          <FadeInView trigger={`habits-${habitStats.rate}-${habitStats.activeCount}`}>
           <View style={{ flexDirection: 'row', gap: 10, marginBottom: 18 }}>
             <SummaryTile label="This month" value={`${habitStats.rate}%`} bg={colors.incomeTint} fg={colors.income} />
             <SummaryTile label="Best streak" value={String(habitStats.bestStreak)} bg={colors.warningTint} fg={colors.warning} />
@@ -206,8 +214,11 @@ export default function ReportsScreen({ navigation }: Props) {
               </View>
             </Pressable>
           ))}
+          </FadeInView>
         </ScrollView>
+      )
       )}
+      </SwipeTabView>
     </SafeAreaView>
   );
 }

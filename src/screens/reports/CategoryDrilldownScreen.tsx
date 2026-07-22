@@ -4,7 +4,7 @@ import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { mapIcon } from '@/utils/iconMap';
-import { formatCurrency, formatDateLabel } from '@/utils/format';
+import { formatCurrency, formatDateTimeLabel } from '@/utils/format';
 import { listTransactions, listCategories, getExpenseBreakdownByCategory, TransactionWithDetails, Category } from '@/db';
 import { ReportsStackParamList } from '@/navigation/RootNavigator';
 
@@ -62,8 +62,8 @@ export default function CategoryDrilldownScreen({ navigation, route }: Props) {
               <Feather name={mapIcon(category.icon)} size={16} color={colors.neutral500} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>{t.note || category.name}</Text>
-              <Text style={{ ...typography.caption, color: colors.neutral400 }}>{formatDateLabel(t.occurred_at)}</Text>
+              <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }} numberOfLines={1} ellipsizeMode="tail">{t.note || category.name}</Text>
+              <Text style={{ ...typography.caption, color: colors.neutral400 }}>{formatDateTimeLabel(t.occurred_at)}</Text>
             </View>
             <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>{formatCurrency(t.amount)}</Text>
           </View>

@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, SafeAreaView, Pressable, Alert } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Button } from '@/components/ui';
 import { mapIcon } from '@/utils/iconMap';
-import { formatCurrency, formatFullDate, todayKey } from '@/utils/format';
+import { formatCurrency, formatFullDate, formatStoredTime, todayKey, toTimeKey, toTimestamp } from '@/utils/format';
 import { getTransaction, deleteTransaction, createTransaction, TransactionWithDetails } from '@/db';
 import { MoneyStackParamList } from '@/navigation/RootNavigator';
 
@@ -15,9 +16,17 @@ export default function TransactionDetailScreen({ navigation, route }: Props) {
   const { colors, typography, radius } = useTheme();
   const [tx, setTx] = useState<TransactionWithDetails | null>(null);
 
-  useEffect(() => {
-    getTransaction(route.params.id).then(setTx);
-  }, [route.params.id]);
+  // Reload every time the screen regains focus (e.g. returning from the edit screen after
+  // saving), so the displayed values always match the database.
+  useFocusEffect(
+    useCallback(() => {
+      let alive = true;
+      getTransaction(route.params.id).then((t) => {
+        if (alive) setTx(t);
+      });
+      return () => { alive = false; };
+    }, [route.params.id]),
+  );
 
   if (!tx) return <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }} />;
 
@@ -35,7 +44,7 @@ export default function TransactionDetailScreen({ navigation, route }: Props) {
     if (!tx) return;
     await createTransaction({
       type: tx.type, amount: tx.amount, account_id: tx.account_id, to_account_id: tx.to_account_id,
-      category_id: tx.category_id, note: tx.note, occurred_at: todayKey(), recurring_id: null,
+      category_id: tx.category_id, note: tx.note, occurred_at: toTimestamp(todayKey(), toTimeKey()), recurring_id: null,
     });
     navigation.goBack();
   }
@@ -64,9 +73,11 @@ export default function TransactionDetailScreen({ navigation, route }: Props) {
 
       <View style={{ paddingHorizontal: 24, flex: 1 }}>
         <View style={{ backgroundColor: colors.neutral50, borderRadius: radius.lg, paddingHorizontal: 16 }}>
+          <Row label="Type" value={tx.type[0].toUpperCase() + tx.type.slice(1)} />
           <Row label="Category" value={tx.category_name ?? '—'} />
           <Row label="Account" value={tx.account_name} />
           <Row label="Date" value={formatFullDate(tx.occurred_at)} />
+          <Row label="Time" value={formatStoredTime(tx.occurred_at) || '—'} />
           <Row label="Note" value={tx.note ?? '—'} last />
         </View>
       </View>

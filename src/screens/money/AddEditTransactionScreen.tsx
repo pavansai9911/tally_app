@@ -4,13 +4,16 @@ import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { SegmentOption } from '@/components/ui';
-import { DateField } from '@/components/DateTimeField';
+import { DateField, TimeField } from '@/components/DateTimeField';
+import { SwipeTabView } from '@/components/SwipeTabView';
+import { SuccessOverlay } from '@/components/SuccessOverlay';
 import { mapIcon } from '@/utils/iconMap';
 import {
   createTransaction, updateTransaction, getTransaction, listCategories, listAccounts,
   Category, AccountWithBalance,
 } from '@/db';
-import { todayKey } from '@/utils/format';
+import { todayKey, toTimeKey, toTimestamp, timePartOf } from '@/utils/format';
+import { getActiveCurrency } from '@/utils/currency';
 import { haptic } from '@/utils/haptics';
 import { MoneyStackParamList } from '@/navigation/RootNavigator';
 
@@ -21,7 +24,7 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
   const editId = route.params?.id;
 
   const [type, setType] = useState<'expense' | 'income' | 'transfer'>('expense');
-  const [amount, setAmount] = useState('0');
+  const [amount, setAmount] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<AccountWithBalance[]>([]);
   const [categoryId, setCategoryId] = useState<string | null>(null);
@@ -29,10 +32,13 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
   const [toAccountId, setToAccountId] = useState<string | null>(null);
   const [note, setNote] = useState('');
   const [occurredAt, setOccurredAt] = useState(todayKey());
+  // Time defaults to the current system time for new transactions.
+  const [occurredTime, setOccurredTime] = useState(toTimeKey());
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showAccountPicker, setShowAccountPicker] = useState(false);
   const [showToAccountPicker, setShowToAccountPicker] = useState(false);
   const [touched, setTouched] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -50,6 +56,7 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
           setToAccountId(tx.to_account_id);
           setNote(tx.note ?? '');
           setOccurredAt(tx.occurred_at.slice(0, 10));
+          setOccurredTime(timePartOf(tx.occurred_at) ?? toTimeKey());
         }
       }
     })();
@@ -73,18 +80,14 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
   const categoryValid = type === 'transfer' || !!categoryId;
   const isValid = amountValid && categoryValid && !!accountId && transferValid;
 
-  function handleKeypad(key: string) {
-    haptic('selection');
-    if (key === 'back') {
-      setAmount((prev) => (prev.length > 1 ? prev.slice(0, -1) : '0'));
-      return;
+  // Native numeric keyboard input: allow only digits and a single decimal point.
+  function handleAmountChange(text: string) {
+    let cleaned = text.replace(/[^0-9.]/g, '');
+    const firstDot = cleaned.indexOf('.');
+    if (firstDot !== -1) {
+      cleaned = cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, '');
     }
-    if (key === '.') {
-      if (amount.includes('.')) return;
-      setAmount((prev) => prev + '.');
-      return;
-    }
-    setAmount((prev) => (prev === '0' ? key : prev + key));
+    setAmount(cleaned);
   }
 
   async function handleSave() {
@@ -100,7 +103,7 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
       to_account_id: type === 'transfer' ? toAccountId : null,
       category_id: type === 'transfer' ? null : categoryId,
       note: note.trim() || null,
-      occurred_at: occurredAt,
+      occurred_at: toTimestamp(occurredAt, occurredTime),
       recurring_id: null,
     };
     if (editId) {
@@ -109,7 +112,8 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
       await createTransaction(payload);
     }
     haptic('notificationSuccess');
-    navigation.goBack();
+    // Brief success animation, then return to the previous screen.
+    setSaved(true);
   }
 
   const selectedCategory = categories.find((c) => c.id === categoryId);
@@ -123,36 +127,12 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
         : 'Pick a category'
     : null;
 
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.neutral0 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8 }}>
-        <Pressable onPress={() => navigation.goBack()} hitSlop={8} accessibilityLabel="Close">
-          <Feather name="x" size={22} color={colors.neutral900} />
-        </Pressable>
-        <Text style={{ ...typography.h3, color: colors.neutral900 }}>{editId ? 'Edit transaction' : 'New transaction'}</Text>
-        <View style={{ width: 22 }} />
-      </View>
-
-      <View style={{ flexDirection: 'row', paddingHorizontal: 20, paddingTop: 8, gap: 8 }}>
-        <SegmentOption label="Expense" selected={type === 'expense'} onPress={() => setType('expense')} selectedBg={colors.expenseTint} selectedFg={colors.expense} />
-        <SegmentOption label="Income" selected={type === 'income'} onPress={() => setType('income')} selectedBg={colors.incomeTint} selectedFg={colors.income} />
-        <SegmentOption label="Transfer" selected={type === 'transfer'} onPress={() => setType('transfer')} />
-      </View>
-
-      <View style={{ alignItems: 'center', paddingVertical: 16 }}>
-        <Text style={{ fontSize: 40, fontWeight: '700', color: errorMsg && !amountValid ? colors.expense : colors.neutral900 }}>
-          ₹{amount}
-        </Text>
-        {errorMsg && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
-            <Feather name="alert-circle" size={14} color={colors.expense} />
-            <Text style={{ ...typography.bodySmallMedium, color: colors.expense }}>{errorMsg}</Text>
-          </View>
-        )}
-      </View>
-
+  // One page of the swipeable type pager. Expense/Income show a category; Transfer swaps
+  // that for a destination account. Field state is shared, so switching keeps what applies.
+  function renderForm(pageType: 'expense' | 'income' | 'transfer') {
+    return (
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 20 }} keyboardShouldPersistTaps="handled">
-        {type !== 'transfer' && (
+        {pageType !== 'transfer' && (
           <>
             <Pressable onPress={() => setShowCategoryPicker((s) => !s)} style={rowStyle(colors)}>
               <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>Category</Text>
@@ -175,7 +155,7 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
         )}
 
         <Pressable onPress={() => setShowAccountPicker((s) => !s)} style={rowStyle(colors)}>
-          <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>{type === 'transfer' ? 'From account' : 'Account'}</Text>
+          <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>{pageType === 'transfer' ? 'From account' : 'Account'}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Text style={{ ...typography.bodyMedium, fontWeight: '600', color: colors.neutral900 }}>{selectedAccount?.name ?? 'Select account'}</Text>
             <Feather name="chevron-right" size={16} color={colors.neutral400} />
@@ -191,7 +171,7 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
           </View>
         )}
 
-        {type === 'transfer' && (
+        {pageType === 'transfer' && (
           <>
             <Pressable onPress={() => setShowToAccountPicker((s) => !s)} style={rowStyle(colors)}>
               <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>To account</Text>
@@ -213,6 +193,7 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
         )}
 
         <DateField label="Date" value={occurredAt} onChange={setOccurredAt} maximumDate={new Date(2100, 0, 1)} />
+        <TimeField label="Time" value={occurredTime} onChange={setOccurredTime} />
 
         <View style={{ paddingVertical: 14 }}>
           <Text style={{ ...typography.bodyMedium, color: colors.neutral900, marginBottom: 8 }}>Note</Text>
@@ -225,25 +206,72 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
           />
         </View>
       </ScrollView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.neutral0 }}>
+      <SuccessOverlay
+        visible={saved}
+        message={editId ? 'Changes saved' : 'Transaction added'}
+        onDone={() => { setSaved(false); navigation.goBack(); }}
+      />
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8 }}>
+        <Pressable onPress={() => navigation.goBack()} hitSlop={8} accessibilityLabel="Close">
+          <Feather name="x" size={22} color={colors.neutral900} />
+        </Pressable>
+        <Text style={{ ...typography.h3, color: colors.neutral900 }}>{editId ? 'Edit transaction' : 'New transaction'}</Text>
+        <View style={{ width: 22 }} />
+      </View>
+
+      <View style={{ flexDirection: 'row', paddingHorizontal: 20, paddingTop: 8, gap: 8 }}>
+        <SegmentOption label="Expense" selected={type === 'expense'} onPress={() => setType('expense')} selectedBg={colors.expenseTint} selectedFg={colors.expense} />
+        <SegmentOption label="Income" selected={type === 'income'} onPress={() => setType('income')} selectedBg={colors.incomeTint} selectedFg={colors.income} />
+        <SegmentOption label="Transfer" selected={type === 'transfer'} onPress={() => setType('transfer')} />
+      </View>
+
+      <View style={{ alignItems: 'center', paddingVertical: 16 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ fontSize: 40, fontWeight: '700', color: errorMsg && !amountValid ? colors.expense : colors.neutral900 }}>
+            {getActiveCurrency().symbol}
+          </Text>
+          <TextInput
+            value={amount}
+            onChangeText={handleAmountChange}
+            keyboardType="decimal-pad"
+            autoFocus
+            placeholder="0"
+            placeholderTextColor={colors.neutral300}
+            accessibilityLabel="Amount"
+            style={{
+              fontSize: 40,
+              fontWeight: '700',
+              color: errorMsg && !amountValid ? colors.expense : colors.neutral900,
+              minWidth: 90,
+              maxWidth: 240,
+              paddingVertical: 0,
+            }}
+          />
+        </View>
+        {errorMsg && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
+            <Feather name="alert-circle" size={14} color={colors.expense} />
+            <Text style={{ ...typography.bodySmallMedium, color: colors.expense }}>{errorMsg}</Text>
+          </View>
+        )}
+      </View>
+
+      <SwipeTabView
+        index={type === 'expense' ? 0 : type === 'income' ? 1 : 2}
+        onIndexChange={(i) => setType(i === 0 ? 'expense' : i === 1 ? 'income' : 'transfer')}
+      >
+        {renderForm('expense')}
+        {renderForm('income')}
+        {renderForm('transfer')}
+      </SwipeTabView>
 
       <View style={{ borderTopWidth: 0.5, borderTopColor: colors.surfaceBorder }}>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-          {['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'back'].map((key) => (
-            <Pressable
-              key={key}
-              onPress={() => handleKeypad(key)}
-              accessibilityLabel={key === 'back' ? 'Delete digit' : `Digit ${key}`}
-              style={({ pressed }) => ({ width: '33.33%', paddingVertical: 14, alignItems: 'center', opacity: pressed ? 0.5 : 1 })}
-            >
-              {key === 'back' ? (
-                <Feather name="delete" size={20} color={colors.neutral900} />
-              ) : (
-                <Text style={{ fontSize: 22, color: colors.neutral900 }}>{key}</Text>
-              )}
-            </Pressable>
-          ))}
-        </View>
-        <View style={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 14 }}>
+        <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 14 }}>
           <Pressable
             onPress={handleSave}
             accessibilityRole="button"

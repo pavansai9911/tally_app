@@ -4,11 +4,13 @@ import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Button } from '@/components/ui';
-import { listAccounts, listCategories, updateCategory, AccountWithBalance, Category } from '@/db';
+import { listAccounts, listCategories, updateCategory, setSetting, AccountWithBalance, Category } from '@/db';
+import { CURRENCIES, getActiveCurrency, setActiveCurrency } from '@/utils/currency';
+import { SEED_RANGES, SeedRange, seedSampleData, clearSampleData, hasSampleData } from '@/services/seed';
+import { sendTestReminder, scheduledReminderCount, rescheduleAllHabitReminders } from '@/services/notifications';
 import { mapIcon, CATEGORY_COLOR_OPTIONS } from '@/utils/iconMap';
 import { formatCurrency } from '@/utils/format';
 import { exportBackup, exportTransactionsCsv, importBackupInteractive } from '@/services/backup';
-import { rescheduleAllHabitReminders } from '@/services/notifications';
 import { resetDbHandle } from '@/db/database';
 import SetPinScreen from '@/screens/lock/SetPinScreen';
 import VerifyPinScreen from '@/screens/lock/VerifyPinScreen';
@@ -26,13 +28,50 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
   const [pinStage, setPinStage] = useState<'checking' | 'verify' | 'set'>('checking');
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
+  const [currencyCode, setCurrencyCode] = useState(getActiveCurrency().code);
+  const [seeded, setSeeded] = useState(false);
+  const [reminderCount, setReminderCount] = useState(0);
 
   useEffect(() => {
     if (section === 'accounts') listAccounts().then(setAccounts);
     if (section === 'categories') listCategories().then(setCategories);
     // When changing the PIN: verify the current one first (if one exists).
     if (section === 'pin') isPinSet().then((set) => setPinStage(set ? 'verify' : 'set'));
+    if (section === 'seed') hasSampleData().then(setSeeded);
+    if (section === 'reminders') scheduledReminderCount().then(setReminderCount);
   }, [section]);
+
+  async function runSeed(range: SeedRange, label: string) {
+    setBusy('seed');
+    try {
+      const result = await seedSampleData(range);
+      setSeeded(true);
+      Alert.alert(
+        'Sample data created',
+        `${label}\n\n${result.transactions} transactions\n${result.habitLogs} habit check-ins\n${result.accounts} accounts · ${result.categories} categories · ${result.habits} habits`,
+        [{ text: 'OK', onPress: () => navigation.navigate('Tabs') }],
+      );
+    } catch {
+      Alert.alert('Could not create sample data', 'Nothing was changed.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function confirmSeed(range: SeedRange, label: string) {
+    if (seeded) {
+      Alert.alert(
+        'Replace existing sample data?',
+        'Sample data already exists. It will be removed and regenerated. Your own records are not touched.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Replace', style: 'destructive', onPress: () => runSeed(range, label) },
+        ],
+      );
+    } else {
+      runSeed(range, label);
+    }
+  }
 
   async function changeCategoryColor(id: string, color: string) {
     await updateCategory(id, { color });
@@ -40,7 +79,8 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
   }
 
   const titles: Record<string, string> = {
-    theme: 'Theme', pin: 'App PIN', accounts: 'Manage accounts',
+    currency: 'Currency', theme: 'Theme', pin: 'App PIN', accounts: 'Manage accounts',
+    seed: 'Seed sample data', reminders: 'Reminder diagnostics',
     categories: 'Manage categories', export: 'Export data', backup: 'Backup & restore', privacy: 'Privacy',
   };
 
@@ -125,6 +165,29 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
+        {section === 'currency' && CURRENCIES.map((c) => {
+          const selected = c.code === currencyCode;
+          return (
+            <Pressable
+              key={c.code}
+              onPress={async () => {
+                await setSetting('currency', c.code);
+                await setSetting('currency_symbol', c.symbol);
+                setActiveCurrency(c.code);
+                setCurrencyCode(c.code);
+              }}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, borderBottomWidth: 0.5, borderBottomColor: colors.surfaceBorder }}
+            >
+              <Text style={{ fontSize: 24 }}>{c.flag}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>{c.name}</Text>
+                <Text style={{ ...typography.bodySmall, color: colors.neutral500 }}>{c.code} · {c.symbol}</Text>
+              </View>
+              {selected && <Feather name="check" size={18} color={colors.accent500} />}
+            </Pressable>
+          );
+        })}
+
         {section === 'theme' && (['light', 'dark', 'system'] as const).map((m) => (
           <Pressable key={m} onPress={() => setMode(m)} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 14, borderBottomWidth: 0.5, borderBottomColor: colors.surfaceBorder }}>
             <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>{m[0].toUpperCase() + m.slice(1)}</Text>
@@ -206,6 +269,105 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
                 <Text style={{ ...typography.bodySmall, color: colors.neutral500 }}>Restoring your data…</Text>
               </View>
             )}
+          </View>
+        )}
+
+        {section === 'seed' && (
+          <View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: radius.md, backgroundColor: colors.warningTint, marginBottom: 16 }}>
+              <Feather name="alert-triangle" size={16} color={colors.warning} />
+              <Text style={{ ...typography.bodySmall, color: colors.neutral900, flex: 1 }}>
+                Testing / developer utility. Generates demo records for evaluating reports and performance.
+              </Text>
+            </View>
+            <Text style={{ ...typography.body, color: colors.neutral500, marginBottom: 16, lineHeight: 21 }}>
+              Creates realistic accounts, categories, income, expenses, transfers, budgets, habits and
+              check-in history across the chosen period. Running it again replaces the previous sample
+              data — your own records are never touched.
+            </Text>
+            {seeded && (
+              <Text style={{ ...typography.bodySmallMedium, color: colors.warning, marginBottom: 12 }}>
+                Sample data is currently present.
+              </Text>
+            )}
+            <View style={{ gap: 10 }}>
+              {SEED_RANGES.map((r) => (
+                <Button
+                  key={r.key}
+                  label={busy === 'seed' ? 'Generating…' : r.label}
+                  variant={r.key === 'large' ? 'secondary' : 'primary'}
+                  onPress={() => confirmSeed(r.key, r.label)}
+                />
+              ))}
+              {seeded && (
+                <Button
+                  label="Remove sample data"
+                  variant="destructive"
+                  onPress={() => Alert.alert('Remove sample data?', 'All generated demo records will be deleted.', [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Remove',
+                      style: 'destructive',
+                      onPress: async () => {
+                        setBusy('seed');
+                        await clearSampleData();
+                        setSeeded(false);
+                        setBusy(null);
+                        Alert.alert('Removed', 'Sample data deleted.');
+                      },
+                    },
+                  ])}
+                />
+              )}
+            </View>
+            {busy === 'seed' && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16 }}>
+                <ActivityIndicator color={colors.accent500} />
+                <Text style={{ ...typography.bodySmall, color: colors.neutral500 }}>Working… this can take a few seconds.</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {section === 'reminders' && (
+          <View>
+            <Text style={{ ...typography.body, color: colors.neutral500, marginBottom: 16, lineHeight: 21 }}>
+              Habit reminders are local notifications. They are rebuilt every time the app starts
+              (Android clears scheduled alarms on reboot), use the device's default notification
+              sound, and are delivered even in Doze mode.
+            </Text>
+            <View style={{ padding: 14, borderRadius: radius.lg, backgroundColor: colors.surfaceSunken, marginBottom: 16 }}>
+              <Text style={{ ...typography.bodySmallMedium, color: colors.neutral900 }}>
+                Scheduled reminders: {reminderCount}
+              </Text>
+              <Text style={{ ...typography.caption, color: colors.neutral500, marginTop: 4 }}>
+                Enable a reminder on a habit to add one.
+              </Text>
+            </View>
+            <View style={{ gap: 10 }}>
+              <Button
+                label="Send test reminder (5s)"
+                onPress={async () => {
+                  const ok = await sendTestReminder();
+                  Alert.alert(
+                    ok ? 'Test scheduled' : 'Notifications blocked',
+                    ok
+                      ? 'A test notification will arrive in about 5 seconds. You can leave this screen.'
+                      : 'Notification permission was denied. Enable notifications for Tally in Android settings.',
+                  );
+                }}
+                icon={<Feather name="bell" size={17} color="#FFFFFF" />}
+              />
+              <Button
+                label="Reschedule all reminders"
+                variant="secondary"
+                onPress={async () => {
+                  await rescheduleAllHabitReminders();
+                  setReminderCount(await scheduledReminderCount());
+                  Alert.alert('Done', 'All habit reminders were rebuilt.');
+                }}
+              />
+            </View>
           </View>
         )}
 

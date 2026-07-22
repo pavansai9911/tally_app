@@ -37,8 +37,8 @@ export default function CategoriesListScreen({ navigation }: Props) {
       </View>
 
       <View style={{ flexDirection: 'row', paddingHorizontal: 24, paddingBottom: 12, gap: 8 }}>
-        <SegmentOption label="Expense" selected={type === 'expense'} onPress={() => setType('expense')} selectedBg={colors.neutral900} />
-        <SegmentOption label="Income" selected={type === 'income'} onPress={() => setType('income')} selectedBg={colors.neutral900} />
+        <SegmentOption label="Expense" selected={type === 'expense'} onPress={() => setType('expense')} selectedBg={colors.neutral900} selectedFg={colors.neutral0} />
+        <SegmentOption label="Income" selected={type === 'income'} onPress={() => setType('income')} selectedBg={colors.neutral900} selectedFg={colors.neutral0} />
       </View>
 
       {categories.length === 0 ? (

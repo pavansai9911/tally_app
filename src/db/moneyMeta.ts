@@ -82,6 +82,12 @@ export async function listBudgetsWithSpend(monthKey: string): Promise<BudgetWith
   );
 }
 
+/** A category can hold at most one budget — used to update instead of duplicating. */
+export async function getBudgetByCategory(categoryId: string): Promise<Budget | null> {
+  const db = await getDb();
+  return db.getFirstAsync<Budget>('SELECT * FROM budgets WHERE category_id = ? LIMIT 1', [categoryId]);
+}
+
 export async function createBudget(input: Omit<Budget, 'id'>): Promise<string> {
   const db = await getDb();
   const id = genId('bud');

@@ -5,6 +5,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Button, Input, SegmentOption, ToggleSwitch } from '@/components/ui';
 import { TimeField } from '@/components/DateTimeField';
+import { SuccessOverlay } from '@/components/SuccessOverlay';
 import { mapIcon, HABIT_ICON_OPTIONS } from '@/utils/iconMap';
 import { createHabit, updateHabit, getHabit } from '@/db';
 import { haptic } from '@/utils/haptics';
@@ -32,6 +33,7 @@ export default function AddEditHabitScreen({ navigation, route }: Props) {
   const [selectedDays, setSelectedDays] = useState<number[]>([0, 2, 4]);
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderTime, setReminderTime] = useState('07:00');
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     if (editId) {
@@ -81,18 +83,23 @@ export default function AddEditHabitScreen({ navigation, route }: Props) {
     // Schedule or cancel the local reminder for this habit.
     if (reminderEnabled) {
       await requestNotificationPermission();
-      const saved = await getHabit(habitId);
-      if (saved) await scheduleHabitReminder(saved);
+      const savedHabit = await getHabit(habitId);
+      if (savedHabit) await scheduleHabitReminder(savedHabit);
     } else {
       await cancelHabitReminder(habitId);
     }
 
     haptic('notificationSuccess');
-    navigation.goBack();
+    setSaved(true);
   }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }}>
+      <SuccessOverlay
+        visible={saved}
+        message={editId ? 'Habit updated' : 'Habit created'}
+        onDone={() => { setSaved(false); navigation.goBack(); }}
+      />
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 14 }}>
         <Pressable onPress={() => navigation.goBack()}><Feather name="x" size={22} color={colors.neutral900} /></Pressable>
         <Text style={{ ...typography.h3, color: colors.neutral900 }}>{editId ? 'Edit habit' : 'New habit'}</Text>

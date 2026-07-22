@@ -6,6 +6,8 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { ProgressBar } from '@/components/ui';
+import { AssistantFab } from '@/components/assistant/AssistantFab';
+import { AssistantSheet } from '@/components/assistant/AssistantSheet';
 import { mapIcon } from '@/utils/iconMap';
 import { formatCurrency, monthKey, todayKey, formatWeekdayLong } from '@/utils/format';
 import {
@@ -20,6 +22,7 @@ type Nav = CompositeNavigationProp<BottomTabNavigationProp<ParamListBase>, Nativ
 export default function DashboardScreen() {
   const navigation = useNavigation<Nav>();
   const { colors, typography, radius, isDark } = useTheme();
+  const [assistantOpen, setAssistantOpen] = useState(false);
   const [summary, setSummary] = useState<MonthSummary>({ income: 0, expense: 0, net: 0 });
   const [totalBalance, setTotalBalance] = useState(0);
   const [budgets, setBudgets] = useState<BudgetWithSpend[]>([]);
@@ -58,7 +61,7 @@ export default function DashboardScreen() {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 104 }}>
         <Pressable
           onPress={() => navigation.navigate('Money', { screen: 'AccountsList' })}
           style={{ backgroundColor: isDark ? colors.neutral200 : colors.neutral900, borderRadius: radius.xl, padding: 20, marginBottom: 16 }}
@@ -141,19 +144,47 @@ export default function DashboardScreen() {
         ) : (
           <View style={{ backgroundColor: colors.surfaceCard, borderRadius: radius.lg, paddingHorizontal: 16 }}>
             {recentTx.map((t, i) => (
-              <View key={t.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderBottomWidth: i === recentTx.length - 1 ? 0 : 0.5, borderBottomColor: colors.surfaceBorder }}>
+              <Pressable
+                key={t.id}
+                onPress={() => navigation.navigate('Money', { screen: 'TransactionDetail', params: { id: t.id } })}
+                accessibilityRole="button"
+                accessibilityLabel={`View transaction ${t.note || t.category_name}`}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderBottomWidth: i === recentTx.length - 1 ? 0 : 0.5, borderBottomColor: colors.surfaceBorder }}
+              >
                 <View style={{ width: 30, height: 30, borderRadius: 9, backgroundColor: (t.category_color ?? colors.neutral400) + '22', alignItems: 'center', justifyContent: 'center' }}>
                   <Feather name={mapIcon(t.category_icon ?? 'ti-dots')} size={14} color={t.category_color ?? colors.neutral500} />
                 </View>
-                <Text style={{ flex: 1, ...typography.bodySmallMedium, color: colors.neutral900 }}>{t.note || t.category_name}</Text>
+                {/* Long notes are previewed over at most two lines here. */}
+                <Text
+                  style={{ flex: 1, ...typography.bodySmallMedium, color: colors.neutral900 }}
+                  numberOfLines={2}
+                  ellipsizeMode="tail"
+                >
+                  {t.note || t.category_name}
+                </Text>
                 <Text style={{ ...typography.bodySmallMedium, color: t.type === 'income' ? colors.income : colors.expense }}>
                   {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount).replace('-', '')}
                 </Text>
-              </View>
+              </Pressable>
             ))}
           </View>
         )}
       </ScrollView>
+
+      {/* Tally Assistant — Home only. Sits above the tab bar so it never covers content. */}
+      <AssistantFab onPress={() => setAssistantOpen(true)} />
+      <AssistantSheet
+        visible={assistantOpen}
+        onClose={() => { setAssistantOpen(false); load(); }}
+        onDataChanged={load}
+        onNavigate={(target) => {
+          // Dynamic tab/screen hand-off from the assistant; the shape is validated by
+          // AssistantNavigation, so a loose cast here is safe and keeps the types simple.
+          const nav = navigation as any;
+          if (target.screen) nav.navigate(target.tab, { screen: target.screen, params: target.params });
+          else nav.navigate(target.tab);
+        }}
+      />
     </SafeAreaView>
   );
 }

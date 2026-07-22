@@ -7,7 +7,7 @@
 import { getDb } from '@/db/database';
 import { createTransaction } from '@/db/transactions';
 import { RecurringRule } from '@/db/moneyMeta';
-import { parseDateKey, toDateKey, todayKey } from '@/utils/format';
+import { parseDateKey, toDateKey, todayKey, toTimestamp } from '@/utils/format';
 
 function advance(dateKey: string, frequency: RecurringRule['frequency']): string {
   const d = parseDateKey(dateKey);
@@ -39,7 +39,9 @@ export async function processDueRecurring(): Promise<number> {
         to_account_id: null,
         category_id: rule.category_id,
         note: rule.name,
-        occurred_at: next,
+        // Auto-added entries are stamped at a fixed morning time so they carry a time
+        // component like manually entered transactions.
+        occurred_at: toTimestamp(next, '09:00'),
         recurring_id: rule.id,
       });
       added++;

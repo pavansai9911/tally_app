@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, SafeAreaView, ScrollView, Pressable } from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, Pressable, Alert } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -7,13 +7,15 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { ToggleSwitch } from '@/components/ui';
 import {
   isPinSet, clearPin, isBiometricAvailable, isBiometricEnabled, setBiometricEnabled,
+  authenticateBiometric,
 } from '@/services/lock';
 import VerifyPinScreen from '@/screens/lock/VerifyPinScreen';
+import { getActiveCurrency } from '@/utils/currency';
+import { APP_VERSION } from '@/constants/app';
 import { RootStackParamList } from '@/navigation/RootNavigator';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
-const APP_VERSION = '1.0.0';
 
 export default function SettingsScreen({ navigation }: Props) {
   const { colors, typography, radius, mode } = useTheme();
@@ -21,12 +23,14 @@ export default function SettingsScreen({ navigation }: Props) {
   const [biometricOn, setBiometricOn] = useState(false);
   const [biometricHardware, setBiometricHardware] = useState(false);
   const [pendingDisable, setPendingDisable] = useState(false);
+  const [currencyCode, setCurrencyCode] = useState(getActiveCurrency().code);
 
   const reload = useCallback(() => {
     (async () => {
       setLockEnabled(await isPinSet());
       setBiometricOn(await isBiometricEnabled());
       setBiometricHardware(await isBiometricAvailable());
+      setCurrencyCode(getActiveCurrency().code);
     })();
   }, []);
 
@@ -46,6 +50,19 @@ export default function SettingsScreen({ navigation }: Props) {
   }
 
   async function toggleBiometric(v: boolean) {
+    // Security: both enabling AND disabling biometric unlock require a successful
+    // fingerprint scan, so nobody can change it while the phone is briefly unattended.
+    const ok = await authenticateBiometric(
+      v ? 'Confirm your fingerprint to enable biometric unlock'
+        : 'Confirm your fingerprint to turn off biometric unlock',
+    );
+    if (!ok) {
+      Alert.alert(
+        'Not confirmed',
+        v ? 'Biometric unlock was not enabled.' : 'Biometric unlock was not turned off.',
+      );
+      return;
+    }
     setBiometricOn(v);
     await setBiometricEnabled(v);
   }
@@ -78,6 +95,7 @@ export default function SettingsScreen({ navigation }: Props) {
       <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
         <SectionLabel title="General" />
         <Card>
+          <Row label="Currency" value={currencyCode} onPress={() => navigation.navigate('SettingsSub', { section: 'currency' })} />
           <Row label="Theme" value={mode === 'system' ? 'System' : mode === 'dark' ? 'Dark' : 'Light'} onPress={() => navigation.navigate('SettingsSub', { section: 'theme' })} last />
         </Card>
 
@@ -100,6 +118,12 @@ export default function SettingsScreen({ navigation }: Props) {
         <Card>
           <Row label="Export data" value="" onPress={() => navigation.navigate('SettingsSub', { section: 'export' })} />
           <Row label="Backup & restore" value="" onPress={() => navigation.navigate('SettingsSub', { section: 'backup' })} last />
+        </Card>
+
+        <SectionLabel title="Developer / testing" />
+        <Card>
+          <Row label="Seed sample data" value="" onPress={() => navigation.navigate('SettingsSub', { section: 'seed' })} />
+          <Row label="Reminder diagnostics" value="" onPress={() => navigation.navigate('SettingsSub', { section: 'reminders' })} last />
         </Card>
 
         <SectionLabel title="About" />

@@ -5,7 +5,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { ProgressBar } from '@/components/ui';
 import { mapIcon } from '@/utils/iconMap';
-import { formatCurrency, formatDateLabel, monthKey } from '@/utils/format';
+import { formatCurrency, formatDateTimeLabel, monthKey } from '@/utils/format';
 import { listBudgetsWithSpend, listTransactions, BudgetWithSpend, TransactionWithDetails } from '@/db';
 import { MoneyStackParamList } from '@/navigation/RootNavigator';
 
@@ -69,8 +69,8 @@ export default function BudgetDetailScreen({ navigation, route }: Props) {
               <Feather name={mapIcon(t.category_icon ?? 'ti-dots')} size={16} color={colors.neutral500} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ ...typography.bodySmallMedium, color: colors.neutral900 }}>{t.note || t.category_name}</Text>
-              <Text style={{ ...typography.caption, color: colors.neutral400 }}>{formatDateLabel(t.occurred_at)}</Text>
+              <Text style={{ ...typography.bodySmallMedium, color: colors.neutral900 }} numberOfLines={1} ellipsizeMode="tail">{t.note || t.category_name}</Text>
+              <Text style={{ ...typography.caption, color: colors.neutral400 }}>{formatDateTimeLabel(t.occurred_at)}</Text>
             </View>
             <Text style={{ ...typography.bodySmallMedium, color: colors.neutral900 }}>{formatCurrency(t.amount)}</Text>
           </View>

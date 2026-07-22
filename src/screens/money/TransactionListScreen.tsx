@@ -88,8 +88,17 @@ export default function TransactionListScreen({ navigation }: Props) {
                 <Feather name={mapIcon(item.category_icon ?? 'ti-dots')} size={19} color={item.category_color ?? colors.neutral500} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>{item.note || item.category_name || 'Transaction'}</Text>
-                <Text style={{ ...typography.bodySmall, color: colors.neutral400 }}>{item.category_name ?? item.type} · {item.account_name}</Text>
+                {/* Long notes are previewed on a single line here; the full note is on the detail screen. */}
+                <Text
+                  style={{ ...typography.bodyMedium, color: colors.neutral900 }}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {item.note || item.category_name || 'Transaction'}
+                </Text>
+                <Text style={{ ...typography.bodySmall, color: colors.neutral400 }} numberOfLines={1} ellipsizeMode="tail">
+                  {item.category_name ?? item.type} · {item.account_name}
+                </Text>
               </View>
               <Text style={{ ...typography.bodyMedium, fontWeight: '600', color: item.type === 'income' ? colors.income : item.type === 'expense' ? colors.expense : colors.neutral900 }}>
                 {item.type === 'income' ? '+' : item.type === 'expense' ? '-' : ''}{formatCurrency(item.amount).replace('-', '')}
