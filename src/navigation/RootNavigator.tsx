@@ -170,9 +170,12 @@ function MainTabs() {
           ),
         }}
         listeners={({ navigation: tabNav }) => ({
-          // Tapping the Money tab always lands on Transactions. Without this the stack keeps
-          // whatever inner screen was last open (e.g. Accounts, reached from the Home hero).
-          tabPress: () => {
+          // Hard reset: tapping the Money tab ALWAYS lands on the root Transactions screen and
+          // discards any inner history (Accounts, a detail screen, an open add/edit modal).
+          // preventDefault stops the default "restore last inner screen" behaviour; navigating
+          // to TransactionList (the stack's initial route) pops everything above it.
+          tabPress: (e) => {
+            e.preventDefault();
             tabNav.navigate('Money', { screen: 'TransactionList' });
           },
         })}
@@ -195,8 +198,9 @@ export function RootNavigator() {
   return (
     <RootStack.Navigator screenOptions={stackScreenOptions}>
       <RootStack.Screen name="Tabs" component={MainTabs} />
-      <RootStack.Screen name="Settings" component={SettingsScreen} />
-      <RootStack.Screen name="SettingsSub" component={SettingsSubScreen} />
+      {/* Settings screens fade in rather than sliding — the horizontal slide felt heavy here. */}
+      <RootStack.Screen name="Settings" component={SettingsScreen} options={{ animation: 'fade' }} />
+      <RootStack.Screen name="SettingsSub" component={SettingsSubScreen} options={{ animation: 'fade' }} />
     </RootStack.Navigator>
   );
 }

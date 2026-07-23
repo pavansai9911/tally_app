@@ -29,6 +29,37 @@ const ICON_MAP: Record<string, string> = {
   'ti-percentage': 'percent',
   'ti-dots': 'more-horizontal',
   'ti-checklist': 'check-square',
+  // Extended set (friends, trips, entertainment, etc.)
+  'ti-users': 'users',
+  'ti-map-pin': 'map-pin',
+  'ti-map': 'map',
+  'ti-plane': 'send',
+  'ti-gift': 'gift',
+  'ti-movie': 'film',
+  'ti-music': 'music',
+  'ti-coffee': 'coffee',
+  'ti-cart': 'shopping-cart',
+  'ti-heart': 'heart',
+  'ti-phone': 'smartphone',
+  'ti-wifi': 'wifi',
+  'ti-star': 'star',
+  'ti-camera': 'camera',
+  'ti-headphones': 'headphones',
+  'ti-umbrella': 'umbrella',
+  'ti-tool': 'tool',
+  'ti-book-open': 'book-open',
+  'ti-sun': 'sun',
+  'ti-tag': 'tag',
+  'ti-trending-up': 'trending-up',
+  'ti-package': 'package',
+  'ti-scissors': 'scissors',
+  'ti-thermometer': 'thermometer',
+  'ti-smile': 'smile',
+  'ti-target': 'target',
+  'ti-calendar': 'calendar',
+  'ti-pencil': 'edit-2',
+  'ti-water': 'droplet',
+  'ti-award2': 'award',
 };
 
 export function mapIcon(tablerName: string): string {
@@ -36,12 +67,16 @@ export function mapIcon(tablerName: string): string {
 }
 
 export const CATEGORY_ICON_OPTIONS = [
-  'ti-tools-kitchen-2', 'ti-car', 'ti-shopping-bag', 'ti-bolt', 'ti-medical-cross',
-  'ti-briefcase', 'ti-home', 'ti-device-tv', 'ti-dots',
+  'ti-tools-kitchen-2', 'ti-cart', 'ti-car', 'ti-shopping-bag', 'ti-device-tv', 'ti-movie',
+  'ti-music', 'ti-bolt', 'ti-wifi', 'ti-phone', 'ti-medical-cross', 'ti-heart', 'ti-home',
+  'ti-users', 'ti-gift', 'ti-map-pin', 'ti-plane', 'ti-coffee', 'ti-book', 'ti-camera',
+  'ti-briefcase', 'ti-tag', 'ti-umbrella', 'ti-tool', 'ti-star', 'ti-dots',
 ];
 
 export const HABIT_ICON_OPTIONS = [
-  'ti-run', 'ti-moon', 'ti-glass-full', 'ti-book', 'ti-smoking-no', 'ti-checklist',
+  'ti-run', 'ti-heart', 'ti-book', 'ti-book-open', 'ti-glass-full', 'ti-water', 'ti-moon',
+  'ti-sun', 'ti-smoking-no', 'ti-music', 'ti-headphones', 'ti-pencil', 'ti-target',
+  'ti-smile', 'ti-checklist', 'ti-flame',
 ];
 
 export const CATEGORY_COLOR_OPTIONS = [

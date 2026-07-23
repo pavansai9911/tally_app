@@ -112,6 +112,29 @@ export const MIGRATIONS: Migration[] = [
       `CREATE INDEX IF NOT EXISTS idx_habitlog_date ON habit_logs(log_date)`,
     ],
   },
+  {
+    // Better default-category colours (only if still at the old grey default, so a user's
+    // custom colour is never overwritten) + Entertainment and friend money categories for
+    // existing installs. INSERT ... SELECT ... WHERE NOT EXISTS avoids duplicates.
+    version: 2,
+    statements: [
+      `UPDATE categories SET color = '#7C4DFF' WHERE name = 'Shopping' AND color = '#4B5159'`,
+      `UPDATE categories SET color = '#149C8E' WHERE name = 'Health' AND color = '#6B7280'`,
+      `UPDATE categories SET color = '#34C28A' WHERE name = 'Freelance' AND color = '#1A9E6B'`,
+      `INSERT INTO categories (id, name, type, icon, color)
+         SELECT 'cat_seed_entertainment', 'Entertainment', 'expense', 'ti-device-tv', '#D6336C'
+         WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = 'Entertainment' AND type = 'expense')`,
+      `INSERT INTO categories (id, name, type, icon, color)
+         SELECT 'cat_seed_lentfriend', 'Lent to Friend', 'expense', 'ti-users', '#F2711C'
+         WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = 'Lent to Friend' AND type = 'expense')`,
+      `INSERT INTO categories (id, name, type, icon, color)
+         SELECT 'cat_seed_borrowfriend', 'Borrowed from Friend', 'income', 'ti-users', '#5B79FF'
+         WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = 'Borrowed from Friend' AND type = 'income')`,
+      `INSERT INTO categories (id, name, type, icon, color)
+         SELECT 'cat_seed_gift', 'Gift', 'income', 'ti-gift', '#D6336C'
+         WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = 'Gift' AND type = 'income')`,
+    ],
+  },
 ];
 
 export const LATEST_SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
@@ -119,10 +142,14 @@ export const LATEST_SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
 export const DEFAULT_CATEGORIES: Array<{ name: string; type: 'expense' | 'income'; icon: string; color: string }> = [
   { name: 'Food & Dining', type: 'expense', icon: 'ti-tools-kitchen-2', color: '#E0473F' },
   { name: 'Transport', type: 'expense', icon: 'ti-car', color: '#3D5AFE' },
-  { name: 'Shopping', type: 'expense', icon: 'ti-shopping-bag', color: '#4B5159' },
+  { name: 'Shopping', type: 'expense', icon: 'ti-shopping-bag', color: '#7C4DFF' },
+  { name: 'Entertainment', type: 'expense', icon: 'ti-device-tv', color: '#D6336C' },
   { name: 'Utilities', type: 'expense', icon: 'ti-bolt', color: '#C98A1B' },
-  { name: 'Health', type: 'expense', icon: 'ti-medical-cross', color: '#6B7280' },
+  { name: 'Health', type: 'expense', icon: 'ti-medical-cross', color: '#149C8E' },
+  { name: 'Lent to Friend', type: 'expense', icon: 'ti-users', color: '#F2711C' },
   { name: 'Other', type: 'expense', icon: 'ti-dots', color: '#9AA1A9' },
   { name: 'Salary', type: 'income', icon: 'ti-briefcase', color: '#1A9E6B' },
-  { name: 'Freelance', type: 'income', icon: 'ti-briefcase', color: '#1A9E6B' },
+  { name: 'Freelance', type: 'income', icon: 'ti-briefcase', color: '#34C28A' },
+  { name: 'Borrowed from Friend', type: 'income', icon: 'ti-users', color: '#5B79FF' },
+  { name: 'Gift', type: 'income', icon: 'ti-gift', color: '#D6336C' },
 ];

@@ -11,7 +11,7 @@ import { useTour } from '@/tour/TourProvider';
 import { AssistantFab } from '@/components/assistant/AssistantFab';
 import { AssistantSheet } from '@/components/assistant/AssistantSheet';
 import { mapIcon } from '@/utils/iconMap';
-import { formatCurrency, monthKey, todayKey, formatWeekdayLong } from '@/utils/format';
+import { formatCurrency, monthKey, todayKey, formatWeekdayLong, formatStoredTime } from '@/utils/format';
 import {
   getMonthSummary, getTotalBalance, listBudgetsWithSpend, listTransactions,
   getTodayHabitsWithStatus, upsertLog, deleteLog,
@@ -191,14 +191,15 @@ export default function DashboardScreen() {
                 <View style={{ width: 30, height: 30, borderRadius: 9, backgroundColor: (t.category_color ?? colors.neutral400) + '22', alignItems: 'center', justifyContent: 'center' }}>
                   <Feather name={mapIcon(t.category_icon ?? 'ti-dots')} size={14} color={t.category_color ?? colors.neutral500} />
                 </View>
-                {/* Long notes are previewed over at most two lines here. */}
-                <Text
-                  style={{ flex: 1, ...typography.bodySmallMedium, color: colors.neutral900 }}
-                  numberOfLines={2}
-                  ellipsizeMode="tail"
-                >
-                  {t.note || t.category_name}
-                </Text>
+                {/* Category is the title; time + note preview form the subtitle. */}
+                <View style={{ flex: 1 }}>
+                  <Text style={{ ...typography.bodySmallMedium, color: colors.neutral900 }} numberOfLines={1} ellipsizeMode="tail">
+                    {t.category_name || (t.type === 'transfer' ? 'Transfer' : 'Transaction')}
+                  </Text>
+                  <Text style={{ ...typography.caption, color: colors.neutral400 }} numberOfLines={1} ellipsizeMode="tail">
+                    {[formatStoredTime(t.occurred_at), t.note].filter(Boolean).join(' · ') || t.account_name}
+                  </Text>
+                </View>
                 <Text style={{ ...typography.bodySmallMedium, color: t.type === 'income' ? colors.income : colors.expense }}>
                   {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount).replace('-', '')}
                 </Text>

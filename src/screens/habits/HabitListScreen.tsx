@@ -100,12 +100,14 @@ export default function HabitListScreen({ navigation }: Props) {
             return (
               <Pressable
                 key={h.id}
-                onPress={() => quickToggle(h)}
+                // Tap the row to open details; the circle checks it off; long-press logs a value.
+                // (Was onPressIn -> navigate, which fired on touch-down and hijacked scrolls/swipes.)
+                onPress={() => navigation.navigate('HabitDetail', { id: h.id })}
                 onLongPress={() => { setSheetHabit(h); setLogValue(h.log?.value ? String(h.log.value) : ''); }}
-                onPressIn={() => navigation.navigate('HabitDetail', { id: h.id })}
+                delayLongPress={280}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderWidth: done ? 0.5 : 1.5, borderColor: done ? colors.surfaceBorder : colors.accent500, borderRadius: radius.lg, marginBottom: 10, opacity: done ? 0.6 : 1 }}
               >
-                <Pressable onPress={() => quickToggle(h)} style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: done ? colors.income : 'transparent', borderWidth: done ? 0 : 2, borderColor: colors.neutral200, alignItems: 'center', justifyContent: 'center' }}>
+                <Pressable onPress={() => quickToggle(h)} hitSlop={6} style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: done ? colors.income : 'transparent', borderWidth: done ? 0 : 2, borderColor: colors.neutral200, alignItems: 'center', justifyContent: 'center' }}>
                   {done && <Feather name="check" size={20} color="#FFFFFF" />}
                 </Pressable>
                 <View style={{ flex: 1 }}>

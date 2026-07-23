@@ -6,7 +6,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { EmptyState } from '@/components/ui';
 import { mapIcon } from '@/utils/iconMap';
-import { formatCurrency, formatDateLabel, monthKey } from '@/utils/format';
+import { formatCurrency, formatDateLabel, formatStoredTime, monthKey } from '@/utils/format';
 import { listTransactions, getMonthSummary, TransactionWithDetails } from '@/db';
 import { MoneyStackParamList } from '@/navigation/RootNavigator';
 
@@ -88,16 +88,16 @@ export default function TransactionListScreen({ navigation }: Props) {
                 <Feather name={mapIcon(item.category_icon ?? 'ti-dots')} size={19} color={item.category_color ?? colors.neutral500} />
               </View>
               <View style={{ flex: 1 }}>
-                {/* Long notes are previewed on a single line here; the full note is on the detail screen. */}
+                {/* Category is the title; note (preview) + time + account form the subtitle. */}
                 <Text
                   style={{ ...typography.bodyMedium, color: colors.neutral900 }}
                   numberOfLines={1}
                   ellipsizeMode="tail"
                 >
-                  {item.note || item.category_name || 'Transaction'}
+                  {item.category_name || (item.type === 'transfer' ? 'Transfer' : 'Transaction')}
                 </Text>
                 <Text style={{ ...typography.bodySmall, color: colors.neutral400 }} numberOfLines={1} ellipsizeMode="tail">
-                  {item.category_name ?? item.type} · {item.account_name}
+                  {[formatStoredTime(item.occurred_at), item.note || item.account_name].filter(Boolean).join(' · ')}
                 </Text>
               </View>
               <Text style={{ ...typography.bodyMedium, fontWeight: '600', color: item.type === 'income' ? colors.income : item.type === 'expense' ? colors.expense : colors.neutral900 }}>
