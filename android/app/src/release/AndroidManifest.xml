@@ -1,0 +1,21 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+      Release-only overrides. Library manifests (React Native core, notifee, etc.) merge in a
+      few permissions Tally deliberately does NOT ship. This overlay strips them from release
+      builds only:
+
+      - INTERNET: Tally is fully offline (see CLAUDE.md §1/§12). Debug keeps it via
+        src/debug/AndroidManifest.xml so Metro can serve JS.
+      - SCHEDULE_EXACT_ALARM: reminders use alarmManager.allowWhileIdle (inexact, Doze-safe),
+        so this permission is unnecessary and attracts Play policy review (CLAUDE.md §8).
+
+      tools:node="remove" tells the manifest merger to drop any matching permission a library
+      contributes. This overlay applies to the release variant only; the debug variant is
+      untouched.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" tools:node="remove" />
+
+</manifest>

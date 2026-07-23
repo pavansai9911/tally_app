@@ -10,10 +10,12 @@ import { TourTarget } from '@/tour/TourTarget';
 import { useTour } from '@/tour/TourProvider';
 import { AssistantFab } from '@/components/assistant/AssistantFab';
 import { AssistantSheet } from '@/components/assistant/AssistantSheet';
+import { PeriodMenu } from '@/components/PeriodMenu';
 import { mapIcon } from '@/utils/iconMap';
-import { formatCurrency, monthKey, todayKey, formatWeekdayLong } from '@/utils/format';
+import { formatCurrency, monthKey, todayKey, formatWeekdayLong, formatStoredTime } from '@/utils/format';
+import { PeriodKey, periodStartKey } from '@/utils/period';
 import {
-  getMonthSummary, getTotalBalance, listBudgetsWithSpend, listTransactions,
+  getMonthSummary, getRangeSummary, getTotalBalance, listBudgetsWithSpend, listTransactions,
   getTodayHabitsWithStatus, upsertLog, deleteLog,
   MonthSummary, BudgetWithSpend, TransactionWithDetails,
 } from '@/db';
@@ -33,14 +35,21 @@ export default function DashboardScreen() {
   const [budgets, setBudgets] = useState<BudgetWithSpend[]>([]);
   const [habits, setHabits] = useState<Awaited<ReturnType<typeof getTodayHabitsWithStatus>>>([]);
   const [recentTx, setRecentTx] = useState<TransactionWithDetails[]>([]);
+  // Hero income/expense/net window. Total balance always stays all-time regardless.
+  const [period, setPeriod] = useState<PeriodKey>('month');
+
+  // Recompute only the hero summary when the period changes (cheap, SQL-aggregated).
+  const loadSummary = useCallback(async (p: PeriodKey) => {
+    setSummary(p === 'month' ? await getMonthSummary(monthKey()) : await getRangeSummary(periodStartKey(p)));
+  }, []);
 
   const load = useCallback(async () => {
-    setSummary(await getMonthSummary(monthKey()));
+    await loadSummary(period);
     setTotalBalance(await getTotalBalance());
     setBudgets((await listBudgetsWithSpend(monthKey())).slice(0, 2));
     setHabits(await getTodayHabitsWithStatus(todayKey()));
     setRecentTx((await listTransactions(5)));
-  }, []);
+  }, [loadSummary, period]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -98,13 +107,19 @@ export default function DashboardScreen() {
             <Text style={{ ...typography.caption, color: colors.neutral400, textTransform: 'uppercase' }}>Total balance</Text>
             <Feather name="chevron-right" size={16} color={colors.neutral400} />
           </View>
-          <Text style={{ fontSize: 28, fontWeight: '700', color: '#FFFFFF', marginTop: 6, marginBottom: isEmpty ? 0 : 16 }}>{formatCurrency(totalBalance)}</Text>
+          <Text style={{ fontSize: 28, fontWeight: '700', color: '#FFFFFF', marginTop: 6, marginBottom: isEmpty ? 0 : 14 }}>{formatCurrency(totalBalance)}</Text>
           {!isEmpty && (
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              <MiniStat label="Income" value={formatCurrency(summary.income)} icon="arrow-down-left" bg="#13301F" fg={colors.income} />
-              <MiniStat label="Expense" value={formatCurrency(summary.expense)} icon="arrow-up-right" bg="#3A1816" fg={colors.expense} />
-              <MiniStat label="Net" value={`${summary.net >= 0 ? '+' : ''}${formatCurrency(summary.net)}`} icon="trending-up" bg="#1B2040" fg="#5B79FF" />
-            </View>
+            <>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <Text style={{ ...typography.caption, color: colors.neutral400, textTransform: 'uppercase' }}>Overview</Text>
+                <PeriodMenu value={period} onChange={(p) => { setPeriod(p); loadSummary(p); }} variant="onDark" />
+              </View>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <MiniStat label="Income" value={formatCurrency(summary.income)} icon="arrow-down-left" bg="#13301F" fg={colors.income} />
+                <MiniStat label="Expense" value={formatCurrency(summary.expense)} icon="arrow-up-right" bg="#3A1816" fg={colors.expense} />
+                <MiniStat label="Net" value={`${summary.net >= 0 ? '+' : ''}${formatCurrency(summary.net)}`} icon="trending-up" bg="#1B2040" fg="#5B79FF" />
+              </View>
+            </>
           )}
         </Pressable>
         </TourTarget>
@@ -191,14 +206,15 @@ export default function DashboardScreen() {
                 <View style={{ width: 30, height: 30, borderRadius: 9, backgroundColor: (t.category_color ?? colors.neutral400) + '22', alignItems: 'center', justifyContent: 'center' }}>
                   <Feather name={mapIcon(t.category_icon ?? 'ti-dots')} size={14} color={t.category_color ?? colors.neutral500} />
                 </View>
-                {/* Long notes are previewed over at most two lines here. */}
-                <Text
-                  style={{ flex: 1, ...typography.bodySmallMedium, color: colors.neutral900 }}
-                  numberOfLines={2}
-                  ellipsizeMode="tail"
-                >
-                  {t.note || t.category_name}
-                </Text>
+                {/* Category is the title; time + note preview form the subtitle. */}
+                <View style={{ flex: 1 }}>
+                  <Text style={{ ...typography.bodySmallMedium, color: colors.neutral900 }} numberOfLines={1} ellipsizeMode="tail">
+                    {t.category_name || (t.type === 'transfer' ? 'Transfer' : 'Transaction')}
+                  </Text>
+                  <Text style={{ ...typography.caption, color: colors.neutral400 }} numberOfLines={1} ellipsizeMode="tail">
+                    {[formatStoredTime(t.occurred_at), t.note].filter(Boolean).join(' · ') || t.account_name}
+                  </Text>
+                </View>
                 <Text style={{ ...typography.bodySmallMedium, color: t.type === 'income' ? colors.income : colors.expense }}>
                   {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount).replace('-', '')}
                 </Text>

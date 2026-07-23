@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, SafeAreaView, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Button } from '@/components/ui';
+import { useConfirm } from '@/components/ConfirmDialog';
 import { listAccounts, listCategories, updateCategory, setSetting, AccountWithBalance, Category } from '@/db';
 import { CURRENCIES, getActiveCurrency, setActiveCurrency } from '@/utils/currency';
 import { SEED_RANGES, SeedRange, seedSampleData, clearSampleData, hasSampleData } from '@/services/seed';
@@ -22,6 +23,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'SettingsSub'>;
 
 export default function SettingsSubScreen({ navigation, route }: Props) {
   const { colors, typography, radius, mode, setMode } = useTheme();
+  const confirm = useConfirm();
   const { section } = route.params;
   const [accounts, setAccounts] = useState<AccountWithBalance[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -46,13 +48,14 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
     try {
       const result = await seedSampleData(range);
       setSeeded(true);
-      Alert.alert(
-        'Sample data created',
-        `${label}\n\n${result.transactions} transactions\n${result.habitLogs} habit check-ins\n${result.accounts} accounts · ${result.categories} categories · ${result.habits} habits`,
-        [{ text: 'OK', onPress: () => navigation.navigate('Tabs') }],
-      );
+      confirm({
+        title: 'Sample data created',
+        message: `${label}\n\n${result.transactions} transactions · ${result.habitLogs} habit check-ins\n${result.accounts} accounts · ${result.categories} categories · ${result.habits} habits`,
+        icon: 'check-circle',
+        buttons: [{ text: 'View', style: 'default', onPress: () => navigation.navigate('Tabs') }],
+      });
     } catch {
-      Alert.alert('Could not create sample data', 'Nothing was changed.');
+      confirm({ title: 'Could not create sample data', message: 'Nothing was changed.', icon: 'alert-circle', tone: 'danger' });
     } finally {
       setBusy(null);
     }
@@ -60,14 +63,15 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
 
   function confirmSeed(range: SeedRange, label: string) {
     if (seeded) {
-      Alert.alert(
-        'Replace existing sample data?',
-        'Sample data already exists. It will be removed and regenerated. Your own records are not touched.',
-        [
-          { text: 'Cancel', style: 'cancel' },
+      confirm({
+        title: 'Replace existing sample data?',
+        message: 'The current sample data will be removed and regenerated. Your own records are not touched.',
+        icon: 'refresh-cw',
+        buttons: [
           { text: 'Replace', style: 'destructive', onPress: () => runSeed(range, label) },
+          { text: 'Cancel', style: 'cancel' },
         ],
-      );
+      });
     } else {
       runSeed(range, label);
     }
@@ -107,7 +111,7 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
     try {
       await exportTransactionsCsv();
     } catch {
-      Alert.alert('Export failed', 'Could not create the CSV file.');
+      confirm({ title: 'Export failed', message: 'Could not create the CSV file.', icon: 'alert-circle', tone: 'danger' });
     } finally {
       setBusy(null);
     }
@@ -118,18 +122,19 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
     try {
       await exportBackup();
     } catch {
-      Alert.alert('Backup failed', 'Could not create the backup file.');
+      confirm({ title: 'Backup failed', message: 'Could not create the backup file.', icon: 'alert-circle', tone: 'danger' });
     } finally {
       setBusy(null);
     }
   }
 
   function handleRestore() {
-    Alert.alert(
-      'Restore from backup?',
-      'This replaces ALL current data on this device with the contents of the backup file. This cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
+    confirm({
+      title: 'Restore from backup?',
+      message: 'This replaces ALL current data on this device with the contents of the backup file. This cannot be undone.',
+      icon: 'alert-triangle',
+      tone: 'danger',
+      buttons: [
         {
           text: 'Choose file',
           style: 'destructive',
@@ -140,19 +145,23 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
               if (result.restored) {
                 resetDbHandle();
                 await rescheduleAllHabitReminders();
-                Alert.alert('Restore complete', 'Your data has been restored.', [
-                  { text: 'OK', onPress: () => navigation.navigate('Tabs') },
-                ]);
+                confirm({
+                  title: 'Restore complete',
+                  message: 'Your data has been restored.',
+                  icon: 'check-circle',
+                  buttons: [{ text: 'OK', style: 'default', onPress: () => navigation.navigate('Tabs') }],
+                });
               } else if (result.error) {
-                Alert.alert('Could not restore', result.error);
+                confirm({ title: 'Could not restore', message: result.error, icon: 'alert-circle', tone: 'danger' });
               }
             } finally {
               setBusy(null);
             }
           },
         },
+        { text: 'Cancel', style: 'cancel' },
       ],
-    );
+    });
   }
 
   return (
@@ -303,20 +312,25 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
                 <Button
                   label="Remove sample data"
                   variant="destructive"
-                  onPress={() => Alert.alert('Remove sample data?', 'All generated demo records will be deleted.', [
-                    { text: 'Cancel', style: 'cancel' },
-                    {
-                      text: 'Remove',
-                      style: 'destructive',
-                      onPress: async () => {
-                        setBusy('seed');
-                        await clearSampleData();
-                        setSeeded(false);
-                        setBusy(null);
-                        Alert.alert('Removed', 'Sample data deleted.');
+                  onPress={() => confirm({
+                    title: 'Remove sample data?',
+                    message: 'All generated demo records will be deleted. Your own records are untouched.',
+                    icon: 'trash-2',
+                    buttons: [
+                      {
+                        text: 'Remove',
+                        style: 'destructive',
+                        onPress: async () => {
+                          setBusy('seed');
+                          await clearSampleData();
+                          setSeeded(false);
+                          setBusy(null);
+                          confirm({ title: 'Removed', message: 'Sample data deleted.', icon: 'check-circle' });
+                        },
                       },
-                    },
-                  ])}
+                      { text: 'Cancel', style: 'cancel' },
+                    ],
+                  })}
                 />
               )}
             </View>
@@ -349,12 +363,14 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
                 label="Send test reminder (5s)"
                 onPress={async () => {
                   const ok = await sendTestReminder();
-                  Alert.alert(
-                    ok ? 'Test scheduled' : 'Notifications blocked',
-                    ok
+                  confirm({
+                    title: ok ? 'Test scheduled' : 'Notifications blocked',
+                    message: ok
                       ? 'A test notification will arrive in about 5 seconds. You can leave this screen.'
                       : 'Notification permission was denied. Enable notifications for Tally in Android settings.',
-                  );
+                    icon: ok ? 'bell' : 'bell-off',
+                    tone: ok ? 'default' : 'danger',
+                  });
                 }}
                 icon={<Feather name="bell" size={17} color="#FFFFFF" />}
               />
@@ -364,7 +380,7 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
                 onPress={async () => {
                   await rescheduleAllHabitReminders();
                   setReminderCount(await scheduledReminderCount());
-                  Alert.alert('Done', 'All habit reminders were rebuilt.');
+                  confirm({ title: 'Done', message: 'All habit reminders were rebuilt.', icon: 'check-circle' });
                 }}
               />
             </View>

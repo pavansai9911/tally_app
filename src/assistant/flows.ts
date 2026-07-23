@@ -41,7 +41,7 @@ const amountParser = (input: string): string | null => {
 
 async function categoryChips(type: 'expense' | 'income'): Promise<Suggestion[]> {
   const cats = await listCategories(type);
-  const names = cats.slice(0, 6).map((c) => ({ label: c.name }));
+  const names = cats.slice(0, 12).map((c) => ({ label: c.name }));
   return names.length > 0 ? names : [{ label: 'Other' }];
 }
 
@@ -58,7 +58,7 @@ async function singleAccountPrefill(slot: string): Promise<Record<string, string
 
 async function habitChips(): Promise<Suggestion[]> {
   const habits = await listHabits();
-  return habits.slice(0, 6).map((h) => ({ label: h.name }));
+  return habits.slice(0, 8).map((h) => ({ label: h.name }));
 }
 
 export const FLOWS: FlowDef[] = [

@@ -1,10 +1,11 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, SafeAreaView, Pressable, Alert } from 'react-native';
+import { View, Text, SafeAreaView, Pressable } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Button } from '@/components/ui';
+import { useConfirm } from '@/components/ConfirmDialog';
 import { mapIcon } from '@/utils/iconMap';
 import { formatCurrency, formatFullDate, formatStoredTime, todayKey, toTimeKey, toTimestamp } from '@/utils/format';
 import { getTransaction, deleteTransaction, createTransaction, TransactionWithDetails } from '@/db';
@@ -14,6 +15,7 @@ type Props = NativeStackScreenProps<MoneyStackParamList, 'TransactionDetail'>;
 
 export default function TransactionDetailScreen({ navigation, route }: Props) {
   const { colors, typography, radius } = useTheme();
+  const confirm = useConfirm();
   const [tx, setTx] = useState<TransactionWithDetails | null>(null);
 
   // Reload every time the screen regains focus (e.g. returning from the edit screen after
@@ -34,10 +36,15 @@ export default function TransactionDetailScreen({ navigation, route }: Props) {
   const sign = tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : '';
 
   function confirmDelete() {
-    Alert.alert('Delete transaction?', `"${tx?.note || tx?.category_name}" will be permanently removed. This can't be undone.`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => { await deleteTransaction(tx!.id); navigation.goBack(); } },
-    ]);
+    confirm({
+      title: 'Delete transaction?',
+      message: `${formatCurrency(tx!.amount)} · "${tx?.note || tx?.category_name || 'this transaction'}" will be permanently removed. This can't be undone.`,
+      icon: 'trash-2',
+      buttons: [
+        { text: 'Delete', style: 'destructive', onPress: async () => { await deleteTransaction(tx!.id); navigation.goBack(); } },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    });
   }
 
   async function duplicate() {

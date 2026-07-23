@@ -14,6 +14,7 @@ import { RootNavigator } from '@/navigation/RootNavigator';
 import OnboardingNavigator from '@/screens/onboarding/OnboardingNavigator';
 import LockScreen from '@/screens/lock/LockScreen';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { ConfirmProvider } from '@/components/ConfirmDialog';
 import { TourProvider } from '@/tour/TourProvider';
 import { runStartupTasks } from '@/services/startup';
 import { isPinSet, isBiometricAvailable } from '@/services/lock';
@@ -100,7 +101,9 @@ export default function App() {
     <ErrorBoundary>
       <SafeAreaProvider>
         <ThemeProvider>
-          <AppInner />
+          <ConfirmProvider>
+            <AppInner />
+          </ConfirmProvider>
         </ThemeProvider>
       </SafeAreaProvider>
     </ErrorBoundary>
