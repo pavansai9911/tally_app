@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, SafeAreaView, Pressable, ScrollView, Alert } from 'react-native';
+import { View, Text, SafeAreaView, Pressable, ScrollView } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Button, Input } from '@/components/ui';
+import { useConfirm } from '@/components/ConfirmDialog';
 import { mapIcon, CATEGORY_ICON_OPTIONS, CATEGORY_COLOR_OPTIONS } from '@/utils/iconMap';
 import { createCategory, updateCategory, deleteCategory, listCategories, countTransactionsForCategory, Category } from '@/db';
 import { MoneyStackParamList } from '@/navigation/RootNavigator';
@@ -12,6 +13,7 @@ type Props = NativeStackScreenProps<MoneyStackParamList, 'AddEditCategory'>;
 
 export default function AddEditCategoryScreen({ navigation, route }: Props) {
   const { colors, typography, radius } = useTheme();
+  const confirm = useConfirm();
   const editId = route.params?.id;
 
   const [name, setName] = useState('');
@@ -44,14 +46,15 @@ export default function AddEditCategoryScreen({ navigation, route }: Props) {
   async function handleDelete() {
     if (!editId) return;
     const count = await countTransactionsForCategory(editId);
-    Alert.alert(
-      'Delete category?',
-      count > 0 ? `This category has ${count} transaction${count === 1 ? '' : 's'}. They will be kept but unlinked from this category.` : 'This category will be removed.',
-      [
+    confirm({
+      title: `Delete "${name.trim() || 'category'}"?`,
+      message: count > 0 ? `Its ${count} transaction${count === 1 ? '' : 's'} will be kept but left uncategorised.` : 'This category will be removed.',
+      icon: 'trash-2',
+      buttons: [
+        { text: 'Delete category', style: 'destructive', onPress: async () => { await deleteCategory(editId); navigation.goBack(); } },
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: async () => { await deleteCategory(editId); navigation.goBack(); } },
-      ]
-    );
+      ],
+    });
   }
 
   return (

@@ -13,7 +13,7 @@ Rules and rationale live in [../CLAUDE.md](../CLAUDE.md).
 │   onboarding · lock · home · money · habits · reports · settings
 ├──────────────────────────────────────────────────────────┤
 │ Shared UI (src/components) · Theme (src/theme)           │  reusable, themed
-│   ui kit · charts · SwipeTabView · overlays · assistant  │
+│   ui kit · charts · SwipeTabs · ConfirmDialog · overlays │
 │ Cross-cutting: src/tour  (spotlight product tour)        │
 ├──────────────────────────────────────────────────────────┤
 │ Services (src/services)                                  │  behaviour / side effects
@@ -132,10 +132,12 @@ Bottom tabs (Home · Money · Habits · Reports), each Money/Habits/Reports tab 
 stack; Settings sits on the root stack above the tabs.
 
 - Transitions are configured once in `RootNavigator` (`slide_from_right`, modals
-  `slide_from_bottom`, tabs cross-fade).
-- The **Money tab resets to Transactions** on every tab press.
-- Inner tabs use `SwipeTabView` (paging ScrollView) — horizontal only, so each page keeps its own
-  vertical scroll without gesture conflicts.
+  `slide_from_bottom`, tabs cross-fade, **Settings fades**).
+- The **Money tab resets to Transactions** on every tab press (even a repeat tap).
+- Inner tabs use `SwipeTabs` (paging ScrollView with a scroll-driven sliding indicator) —
+  horizontal only, so each page keeps its own vertical scroll without gesture conflicts.
+- App-wide confirmations run through `ConfirmProvider` / `useConfirm` (`components/ConfirmDialog`)
+  instead of the OS `Alert`, so they are theme-aware and message copy can be context-specific.
 
 ---
 

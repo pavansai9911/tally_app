@@ -10,6 +10,48 @@ from `package.json` — the single source of truth, from which `versionName` and
 
 ---
 
+## [1.1.0] — 2026-07-23
+
+### Added
+- **Themed confirmation dialogs.** Every destructive action (delete transaction / habit /
+  category / budget / recurring rule, reset lock, restore backup, replace sample data) now
+  uses an in-app, theme-aware dialog instead of the OS `Alert`. Messages are context-aware —
+  deleting a habit spells out the active streak, check-ins and best streak you'd lose.
+- **Money transaction filters.** Filter the list by type (income / expense / transfer),
+  category and month, with a live result count, active-filter chips and one-tap clear-all.
+- **Reports period filter.** Summary tiles and the expense-breakdown donut follow a
+  This month / 3 months / 6 months / All time selector.
+- **Home hero period.** The Overview income/expense/net figures switch between the same
+  periods; Total balance stays all-time.
+- **Interactive swipe tabs (`SwipeTabs`).** Money add-transaction, Habits, Reports and the
+  Categories screen now use a segmented control whose highlight and label colours follow the
+  finger in real time as you swipe between pages, with a smooth sliding indicator.
+- **Categories screen** can now be swiped between Expense and Income.
+- More category and habit **icons** (friends, trips, gifts, coffee, etc.) and new default
+  friend categories — **Lent to Friend**, **Borrowed from Friend** and **Gift**.
+- Transaction rows now show the **time** alongside the note/account.
+
+### Changed
+- **Transaction rows lead with the category name** (title) and show note · time as the
+  subtitle, on both the Money list and the Home recents.
+- Report categories (Shopping, Health, Entertainment, Freelance) get distinct colours instead
+  of grey; existing installs are recoloured only if still on the old default.
+- Opening **Settings** now cross-fades instead of sliding in from the side.
+- Assistant category/habit chips show more of your own categories and habits; the offline
+  NLU understands many more phrasings for money and habit requests.
+- Habit rows **cascade in** on entry; the whole page no longer re-fades on each check-in.
+
+### Fixed
+- **Money tab always resets to Transactions**, even on repeated taps from a deep inner screen.
+- Habit rows no longer treat the start of a swipe as a tap into the detail screen.
+- Assistant now responds correctly to create-habit and streak requests.
+
+### Database
+- Migration `user_version = 2`: recolours a few default categories (only when unchanged) and
+  seeds the new friend/gift categories idempotently.
+
+---
+
 ## [1.0.5] — 2026-07-22
 
 ### Added

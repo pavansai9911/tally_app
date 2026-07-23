@@ -6,6 +6,26 @@ For the engineering view, see [../CHANGELOG.md](../CHANGELOG.md).
 
 ---
 
+## Version 1.1.0
+
+**Filters, friendlier dialogs, and smoother swipes**
+
+- **Find any transaction fast.** The Money tab now has filters — by type, category and month —
+  with a running count and a one-tap "clear all".
+- **Reports and Home can look back further.** Switch the summary between this month, the last
+  3 or 6 months, or all time. Your total balance always reflects everything.
+- **Nicer confirmations.** When you delete something important, the pop-up now matches the app
+  and tells you exactly what's at stake — for a habit, it names the streak you'd be giving up.
+- **Swiping feels alive.** Moving between tabs (in Money, Habits, Reports and Categories)
+  follows your finger, with the highlight sliding as you go. Categories can now be swiped
+  between Expense and Income.
+- **More to work with.** New icons for friends, trips, gifts and more, plus ready-made
+  categories for lending to and borrowing from friends, and gifts.
+- **Small touches.** Transaction rows show the time and lead with the category; habits gently
+  cascade into view; opening Settings now fades in.
+
+---
+
 ## Version 1.0.5
 
 **A guided tour of the app**

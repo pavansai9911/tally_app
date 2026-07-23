@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, SafeAreaView, Pressable, ScrollView, Alert } from 'react-native';
+import { View, Text, SafeAreaView, Pressable, ScrollView } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Button, Input, SegmentOption, ToggleSwitch } from '@/components/ui';
+import { useConfirm } from '@/components/ConfirmDialog';
 import { mapIcon } from '@/utils/iconMap';
 import { createBudget, updateBudget, deleteBudget, listCategories, listBudgetsWithSpend, Category } from '@/db';
 import { monthKey } from '@/utils/format';
@@ -13,6 +14,7 @@ type Props = NativeStackScreenProps<MoneyStackParamList, 'AddEditBudget'>;
 
 export default function AddEditBudgetScreen({ navigation, route }: Props) {
   const { colors, typography, radius } = useTheme();
+  const confirm = useConfirm();
   const editId = route.params?.id;
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -48,10 +50,15 @@ export default function AddEditBudgetScreen({ navigation, route }: Props) {
   }
 
   function handleDelete() {
-    Alert.alert('Delete budget?', 'This will remove the budget limit for this category.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => { if (editId) await deleteBudget(editId); navigation.goBack(); } },
-    ]);
+    confirm({
+      title: 'Delete budget?',
+      message: `This removes the monthly limit for ${selectedCategory?.name ?? 'this category'}. Your transactions stay; only the budget goes.`,
+      icon: 'trash-2',
+      buttons: [
+        { text: 'Delete budget', style: 'destructive', onPress: async () => { if (editId) await deleteBudget(editId); navigation.goBack(); } },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    });
   }
 
   const selectedCategory = categories.find(c => c.id === categoryId);

@@ -3,9 +3,8 @@ import { View, Text, SafeAreaView, Pressable, ScrollView, TextInput } from 'reac
 import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
-import { SegmentOption } from '@/components/ui';
 import { DateField, TimeField } from '@/components/DateTimeField';
-import { SwipeTabView } from '@/components/SwipeTabView';
+import { SwipeTabs } from '@/components/SwipeTabs';
 import { SuccessOverlay } from '@/components/SuccessOverlay';
 import { mapIcon } from '@/utils/iconMap';
 import {
@@ -227,12 +226,6 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
         <View style={{ width: 22 }} />
       </View>
 
-      <View style={{ flexDirection: 'row', paddingHorizontal: 20, paddingTop: 8, gap: 8 }}>
-        <SegmentOption label="Expense" selected={type === 'expense'} onPress={() => setType('expense')} selectedBg={colors.expenseTint} selectedFg={colors.expense} />
-        <SegmentOption label="Income" selected={type === 'income'} onPress={() => setType('income')} selectedBg={colors.incomeTint} selectedFg={colors.income} />
-        <SegmentOption label="Transfer" selected={type === 'transfer'} onPress={() => setType('transfer')} />
-      </View>
-
       <View style={{ alignItems: 'center', paddingVertical: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
           <Text style={{ fontSize: 40, fontWeight: '700', color: errorMsg && !amountValid ? colors.expense : colors.neutral900 }}>
@@ -264,14 +257,20 @@ export default function AddEditTransactionScreen({ navigation, route }: Props) {
         )}
       </View>
 
-      <SwipeTabView
+      <SwipeTabs
+        labels={['Expense', 'Income', 'Transfer']}
         index={type === 'expense' ? 0 : type === 'income' ? 1 : 2}
         onIndexChange={(i) => setType(i === 0 ? 'expense' : i === 1 ? 'income' : 'transfer')}
+        tabColors={[
+          { bg: colors.expenseTint, fg: colors.expense },
+          { bg: colors.incomeTint, fg: colors.income },
+          { bg: colors.neutral900, fg: colors.neutral0 },
+        ]}
       >
         {renderForm('expense')}
         {renderForm('income')}
         {renderForm('transfer')}
-      </SwipeTabView>
+      </SwipeTabs>
 
       <View style={{ borderTopWidth: 0.5, borderTopColor: colors.surfaceBorder }}>
         <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 14 }}>

@@ -1,10 +1,11 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, SafeAreaView, ScrollView, Pressable, Alert } from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, Pressable } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTheme } from '@/theme/ThemeProvider';
 import { ToggleSwitch } from '@/components/ui';
+import { useConfirm } from '@/components/ConfirmDialog';
 import {
   isPinSet, clearPin, isBiometricAvailable, isBiometricEnabled, setBiometricEnabled,
   authenticateBiometric,
@@ -21,6 +22,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 export default function SettingsScreen({ navigation }: Props) {
   const { colors, typography, radius, mode } = useTheme();
   const { startTour } = useTour();
+  const confirm = useConfirm();
   const [lockEnabled, setLockEnabled] = useState(false);
   const [biometricOn, setBiometricOn] = useState(false);
   const [biometricHardware, setBiometricHardware] = useState(false);
@@ -59,10 +61,11 @@ export default function SettingsScreen({ navigation }: Props) {
         : 'Confirm your fingerprint to turn off biometric unlock',
     );
     if (!ok) {
-      Alert.alert(
-        'Not confirmed',
-        v ? 'Biometric unlock was not enabled.' : 'Biometric unlock was not turned off.',
-      );
+      confirm({
+        title: 'Not confirmed',
+        message: v ? 'Biometric unlock was not enabled.' : 'Biometric unlock was not turned off.',
+        icon: 'shield-off',
+      });
       return;
     }
     setBiometricOn(v);

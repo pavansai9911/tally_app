@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, SafeAreaView, Pressable, ScrollView, Alert } from 'react-native';
+import { View, Text, SafeAreaView, Pressable, ScrollView } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Button, Input, SegmentOption, ToggleSwitch } from '@/components/ui';
+import { useConfirm } from '@/components/ConfirmDialog';
 import { DateField } from '@/components/DateTimeField';
 import {
   createRecurringRule, updateRecurringRule, deleteRecurringRule, listRecurringRules,
@@ -17,6 +18,7 @@ type Props = NativeStackScreenProps<MoneyStackParamList, 'AddEditRecurring'>;
 
 export default function AddEditRecurringScreen({ navigation, route }: Props) {
   const { colors, typography } = useTheme();
+  const confirm = useConfirm();
   const editId = route.params?.id;
 
   const [type, setType] = useState<'expense' | 'income'>('expense');
@@ -68,10 +70,15 @@ export default function AddEditRecurringScreen({ navigation, route }: Props) {
   }
 
   function handleDelete() {
-    Alert.alert('Delete recurring rule?', 'This will stop future automatic entries for this item.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => { if (editId) await deleteRecurringRule(editId); navigation.goBack(); } },
-    ]);
+    confirm({
+      title: 'Delete recurring rule?',
+      message: `${name.trim() || 'This rule'} will stop creating automatic entries. Transactions it already added are kept.`,
+      icon: 'trash-2',
+      buttons: [
+        { text: 'Delete rule', style: 'destructive', onPress: async () => { if (editId) await deleteRecurringRule(editId); navigation.goBack(); } },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    });
   }
 
   return (

@@ -5,8 +5,8 @@ import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { EmptyState } from '@/components/ui';
-import { SwipeTabView } from '@/components/SwipeTabView';
-import { FadeInView } from '@/components/SuccessOverlay';
+import { SwipeTabs } from '@/components/SwipeTabs';
+import { FadeInView, StaggerItem } from '@/components/SuccessOverlay';
 import { mapIcon } from '@/utils/iconMap';
 import { todayKey } from '@/utils/format';
 import { getTodayHabitsWithStatus, listHabits, upsertLog, deleteLog, calculateStreaks, Habit, HabitLog } from '@/db';
@@ -66,16 +66,7 @@ export default function HabitListScreen({ navigation }: Props) {
         <Feather name="shuffle" size={20} color={tab === 'all' ? colors.accent500 : colors.neutral900} />
       </View>
 
-      <View style={{ flexDirection: 'row', paddingHorizontal: 24, paddingBottom: 14, gap: 8 }}>
-        <Pressable onPress={() => setTab('today')} style={{ paddingVertical: 8, paddingHorizontal: 16, borderRadius: 18, backgroundColor: tab === 'today' ? colors.neutral900 : colors.neutral50 }}>
-          <Text style={{ ...typography.bodySmallMedium, color: tab === 'today' ? colors.neutral0 : colors.neutral600 }}>Today</Text>
-        </Pressable>
-        <Pressable onPress={() => setTab('all')} style={{ paddingVertical: 8, paddingHorizontal: 16, borderRadius: 18, backgroundColor: tab === 'all' ? colors.neutral900 : colors.neutral50 }}>
-          <Text style={{ ...typography.bodySmallMedium, color: tab === 'all' ? colors.neutral0 : colors.neutral600 }}>All habits</Text>
-        </Pressable>
-      </View>
-
-      <SwipeTabView index={tab === 'today' ? 0 : 1} onIndexChange={(i) => setTab(i === 0 ? 'today' : 'all')}>
+      <SwipeTabs labels={['Today', 'All habits']} index={tab === 'today' ? 0 : 1} onIndexChange={(i) => setTab(i === 0 ? 'today' : 'all')}>
         {/* Page 1 — Today */}
         {todayHabits.length === 0 ? (
           <EmptyState
@@ -87,7 +78,6 @@ export default function HabitListScreen({ navigation }: Props) {
           />
         ) : (
         <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 100 }}>
-          <FadeInView trigger={`today-${todayHabits.length}-${doneCount}`}>
           {/* Daily progress lives inside the page so it doesn't flicker while swiping. */}
           <View style={{ paddingBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <View style={{ flex: 1, height: 8, backgroundColor: colors.neutral100, borderRadius: 4, overflow: 'hidden' }}>
@@ -95,11 +85,12 @@ export default function HabitListScreen({ navigation }: Props) {
             </View>
             <Text style={{ ...typography.caption, color: colors.neutral500 }}>{doneCount} of {todayHabits.length} done</Text>
           </View>
-          {todayHabits.map(h => {
+          {/* Rows cascade in on mount (StaggerItem); keyed so a check-in doesn't replay it. */}
+          {todayHabits.map((h, idx) => {
             const done = h.log?.status === 'done';
             return (
+              <StaggerItem key={h.id} index={idx}>
               <Pressable
-                key={h.id}
                 // Tap the row to open details; the circle checks it off; long-press logs a value.
                 // (Was onPressIn -> navigate, which fired on touch-down and hijacked scrolls/swipes.)
                 onPress={() => navigation.navigate('HabitDetail', { id: h.id })}
@@ -121,9 +112,9 @@ export default function HabitListScreen({ navigation }: Props) {
                   <Text style={{ fontSize: 12, fontWeight: '700', color: h.streak > 0 ? colors.income : colors.neutral400 }}>{h.streak}</Text>
                 </View>
               </Pressable>
+              </StaggerItem>
             );
           })}
-          </FadeInView>
         </ScrollView>
         )}
 
@@ -169,7 +160,7 @@ export default function HabitListScreen({ navigation }: Props) {
           </FadeInView>
         </ScrollView>
         )}
-      </SwipeTabView>
+      </SwipeTabs>
 
       <Pressable
         onPress={() => navigation.navigate('AddEditHabit', undefined)}

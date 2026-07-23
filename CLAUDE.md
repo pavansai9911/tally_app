@@ -63,7 +63,8 @@ App.tsx                  app phases: loading → onboarding → locked → unloc
 index.js                 RN entry (registers "Tally")
 src/
   assistant/             Tally Assistant: engine, intents, flows, NLU, tools
-  components/            shared UI (ui.tsx kit, charts, SwipeTabView, overlays, assistant/)
+  components/            shared UI (ui.tsx kit, charts, SwipeTabs/SwipeTabView, ConfirmDialog,
+                         PeriodMenu, overlays, assistant/)
   constants/             app.ts (APP_VERSION from package.json)
   db/                    driver adapter, migrations, typed queries per domain
   navigation/            RootNavigator (tabs + stacks, transitions)
@@ -155,11 +156,22 @@ forgotten:
 - Bottom tabs: Home, Money, Habits, Reports. **Tapping the Money tab always resets to the
   Transactions screen** (a `tabPress` listener) so it never reopens a deep inner screen.
 - Page transitions: `slide_from_right` for stacks, `slide_from_bottom` for modals, cross-fade
-  between tabs. Configured once in `RootNavigator`.
-- Inner tab switching (Expense/Income/Transfer, Today/All, Money/Habits) uses
-  `components/SwipeTabView` — a paging ScrollView. **Do not add `react-native-pager-view`**;
-  a JS pager avoids another native dependency and pages horizontally only, so each page keeps
-  its own vertical scrolling without gesture conflicts.
+  between tabs. **Settings uses `animation: 'fade'`** (side-slide felt out of place there).
+  Configured once in `RootNavigator`.
+- Inner tab switching (Expense/Income/Transfer, Today/All, Money/Habits, Categories
+  Expense/Income) uses **`components/SwipeTabs`** — a paging ScrollView whose highlight and
+  label colours interpolate off the live scroll offset, so the indicator follows the finger.
+  (`SwipeTabView` is the older non-interactive paging primitive, kept as a lighter option.)
+  **Do not add `react-native-pager-view`**; a JS pager avoids another native dependency and
+  pages horizontally only, so each page keeps its own vertical scrolling without gesture
+  conflicts. Colour interpolation forces `useNativeDriver: false` in `SwipeTabs` — expected.
+- **Confirmations use `components/ConfirmDialog` (`ConfirmProvider` + `useConfirm`), never
+  `Alert.alert`.** One provider wraps the app (above the lock screen) and owns a single
+  themed, animated dialog. `confirm({ title, message, icon?, tone?, buttons })` mirrors
+  `Alert.alert`; messages should be context-aware (e.g. name the streak a delete would cost).
+- **Period selection** (Home hero, Reports) uses `components/PeriodMenu` + `utils/period.ts`
+  (`This month / 3M / 6M / All time`). Backed by `getRangeSummary` / `getExpenseBreakdownByRange`,
+  which filter on `occurred_at >= 'YYYY-MM'`; `'month'` keeps exact prefix matching.
 - Animations use `Animated` with `useNativeDriver: true` wherever the property allows.
 
 ---
@@ -185,7 +197,10 @@ reveal off-screen targets, can switch tabs, and is replayable from **Settings �
 - Local notifications via notifee, using the **device default sound** (no bundled audio, so
   nothing copyrighted ships).
 - Triggers use `alarmManager.allowWhileIdle` so they fire in Doze **without** requiring
-  `SCHEDULE_EXACT_ALARM` (that permission attracts Play policy review).
+  `SCHEDULE_EXACT_ALARM` (that permission attracts Play policy review). notifee's manifest
+  merges the permission in anyway, so `android/app/src/release/AndroidManifest.xml` strips it
+  (and INTERNET) from release with `tools:node="remove"`. **Verify with
+  `aapt2 dump permissions <apk>` after any native/dependency change.**
 - Android drops scheduled alarms on reboot, so **all reminders are rebuilt on every launch**.
 - **Settings → Reminder diagnostics** shows the scheduled count, sends a 5-second test
   notification and can force a reschedule. Use it to verify the pipeline instead of waiting.
@@ -258,7 +273,7 @@ ideally opt-in, and the offline engine should remain as the fallback.
 | Build-Tools **35.0.0** required | `@dr.pogodin/react-native-fs` pins it internally; Gradle cannot auto-install it. |
 | RN 0.81 (not 0.86) | 0.86 requires Node ≥22; the dev machine runs Node 20. |
 | System font, no bundled Inter | Custom font linking was untestable in the build environment; weight-based typography is reliable. |
-| No INTERNET in release | Backs the offline promise; the debug manifest adds it for Metro. |
+| No INTERNET in release | Backs the offline promise. Libraries merge INTERNET (and `SCHEDULE_EXACT_ALARM`) in, so `src/release/AndroidManifest.xml` strips them via `tools:node="remove"`; the debug manifest re-adds INTERNET for Metro. Confirm with `aapt2 dump permissions`. |
 | `allowBackup=false` | A finance app should not auto-sync its DB to Google cloud backup. |
 | SVG assistant avatar | Crisp at any density, themeable, no binary asset, no licensing risk. |
 | Status bar not translucent | Translucent modals break keyboard avoidance on Android and overlapped screen headers. |

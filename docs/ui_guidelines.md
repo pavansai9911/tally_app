@@ -73,8 +73,9 @@ Shared kit in `src/components/ui.tsx` — use these rather than re-styling:
 `SegmentOption`, `ToggleSwitch`, `ProgressBar`, `EmptyState`.
 
 Other shared pieces: `charts.tsx` (donut, grouped bar, trend line, heatmap, progress ring),
-`DateTimeField` (`DateField` / `TimeField`), `SwipeTabView`, `SuccessOverlay` + `FadeInView`,
-`ErrorBoundary`, `assistant/*`.
+`DateTimeField` (`DateField` / `TimeField`), `SwipeTabs` (interactive finger-following segmented
+pager) / `SwipeTabView` (plain pager), `ConfirmDialog` (`ConfirmProvider` + `useConfirm`),
+`PeriodMenu`, `SuccessOverlay` + `FadeInView` + `StaggerItem`, `ErrorBoundary`, `assistant/*`.
 
 - **Buttons:** 52px tall, radius `lg`, `0.85` pressed opacity. Primary actions are full width.
 - **Cards:** `surfaceCard` with a `0.5` `surfaceBorder` outline.
@@ -92,9 +93,10 @@ property allows (SVG geometry is the exception and must use `false`).
 | Screen push | `slide_from_right`, 260ms |
 | Modal | `slide_from_bottom` |
 | Bottom tab switch | cross-fade |
-| Inner tabs | `SwipeTabView` paging + `FadeInView` content fade |
+| Inner tabs | `SwipeTabs` — paging + sliding highlight/label colour that follows the swipe |
+| Confirm / destructive | `ConfirmDialog` — spring-in themed card, never `Alert.alert` |
 | Save success | `SuccessOverlay` — spring circle, popping tick, ~2.2s hold |
-| List/card entrance | `FadeInView` (fade + 12px rise, ~260ms) |
+| List/card entrance | `FadeInView` (fade + 12px rise, ~260ms); `StaggerItem` for cascading rows |
 | Chips | staggered scale/fade, 45ms apart |
 | Press feedback | scale to ~0.92 or opacity 0.85 |
 

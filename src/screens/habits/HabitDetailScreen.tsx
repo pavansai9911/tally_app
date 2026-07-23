@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, SafeAreaView, ScrollView, Pressable, Alert } from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, Pressable } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
+import { useConfirm } from '@/components/ConfirmDialog';
 import { mapIcon } from '@/utils/iconMap';
 import { todayKey, toDateKey, formatMonthYear } from '@/utils/format';
 import {
@@ -15,6 +16,7 @@ type Props = NativeStackScreenProps<HabitsStackParamList, 'HabitDetail'>;
 
 export default function HabitDetailScreen({ navigation, route }: Props) {
   const { colors, typography, radius } = useTheme();
+  const confirm = useConfirm();
   const [habit, setHabit] = useState<Habit | null>(null);
   const [streaks, setStreaks] = useState({ current: 0, longest: 0, totalCompletions: 0, rate30d: 0 });
   const [logs, setLogs] = useState<HabitLog[]>([]);
@@ -37,15 +39,22 @@ export default function HabitDetailScreen({ navigation, route }: Props) {
   if (!habit) return <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }} />;
 
   function confirmDelete() {
-    Alert.alert(
-      `Delete "${habit?.name}"?`,
-      `This permanently deletes the habit and all ${streaks.totalCompletions} check-ins, including your ${streaks.longest}-day longest streak. This can't be undone.`,
-      [
-        { text: 'Archive instead', onPress: async () => { await archiveHabit(habit!.id); navigation.goBack(); } },
+    // Spell out exactly what is lost so the choice is informed — the current streak is the
+    // most emotionally costly part, so lead with it when there is one.
+    const streakLine = streaks.current > 0
+      ? `You'll lose your ${streaks.current}-day active streak, `
+      : '';
+    confirm({
+      title: `Delete "${habit?.name}"?`,
+      message: `${streakLine}all ${streaks.totalCompletions} check-ins and your ${streaks.longest}-day best streak. This can't be undone — archive keeps the history instead.`,
+      icon: 'trash-2',
+      tone: 'danger',
+      buttons: [
+        { text: 'Archive instead', style: 'default', onPress: async () => { await archiveHabit(habit!.id); navigation.goBack(); } },
         { text: 'Delete habit and logs', style: 'destructive', onPress: async () => { await deleteHabitPermanently(habit!.id); navigation.goBack(); } },
         { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+      ],
+    });
   }
 
   const now = new Date();

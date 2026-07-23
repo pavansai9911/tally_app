@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, Pressable, SafeAreaView, Alert } from 'react-native';
+import { View, Text, Pressable, SafeAreaView } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { lockColors } from '@/theme/colors';
+import { useConfirm } from '@/components/ConfirmDialog';
 import { haptic } from '@/utils/haptics';
 import {
   verifyPin,
@@ -18,6 +19,7 @@ const PIN_LENGTH = 4;
 type LockState = 'entry' | 'wrong' | 'lockout';
 
 export default function LockScreen({ onUnlock }: { onUnlock: () => void }) {
+  const confirm = useConfirm();
   const [pin, setPin] = useState('');
   const [state, setState] = useState<LockState>('entry');
   const [attemptsLeft, setAttemptsLeft] = useState(MAX_ATTEMPTS);
@@ -99,21 +101,16 @@ export default function LockScreen({ onUnlock }: { onUnlock: () => void }) {
   }
 
   function handleForgotPin() {
-    Alert.alert(
-      'Reset app lock?',
-      'If you forgot your PIN you can turn off the app lock. Your data stays safe on this device — nothing is deleted. You can set a new PIN later in Settings.',
-      [
+    confirm({
+      title: 'Reset app lock?',
+      message: 'Turning off the lock keeps all your data on this device — nothing is deleted. You can set a new PIN later in Settings.',
+      icon: 'unlock',
+      tone: 'danger',
+      buttons: [
+        { text: 'Turn off lock', style: 'destructive', onPress: async () => { await clearPin(); onUnlock(); } },
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Turn off lock',
-          style: 'destructive',
-          onPress: async () => {
-            await clearPin();
-            onUnlock();
-          },
-        },
       ],
-    );
+    });
   }
 
   const dotColor = state === 'wrong' ? lockColors.expense : lockColors.accent;

@@ -152,3 +152,45 @@ export function FadeInView({
     </Animated.View>
   );
 }
+
+/**
+ * One list row's staggered entrance: fades and eases up with a small per-index delay so a
+ * list "cascades" in. Animates once on mount (keyed rows keep their instance across data
+ * updates), so toggling an item doesn't replay the whole cascade.
+ */
+export function StaggerItem({
+  children,
+  index = 0,
+  style,
+}: {
+  children: React.ReactNode;
+  index?: number;
+  style?: any;
+}) {
+  const progress = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(progress, {
+      toValue: 1,
+      duration: 300,
+      // Cap the delay so long lists still finish quickly.
+      delay: Math.min(index, 8) * 45,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [index, progress]);
+
+  return (
+    <Animated.View
+      style={[
+        {
+          opacity: progress,
+          transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
+        },
+        style,
+      ]}
+    >
+      {children}
+    </Animated.View>
+  );
+}

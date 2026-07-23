@@ -137,6 +137,44 @@ export async function getExpenseBreakdownByCategory(monthKey: string): Promise<C
   );
 }
 
+/**
+ * Income/expense summary from a start month ('YYYY-MM') onward; pass null for all-time.
+ * `occurred_at >= 'YYYY-MM'` works because the stored format ('YYYY-MM-DD HH:MM') sorts
+ * lexicographically and the bare month prefix is <= any timestamp within that month.
+ */
+export async function getRangeSummary(startMonthKey: string | null): Promise<MonthSummary> {
+  const db = await getDb();
+  const where = startMonthKey ? 'WHERE occurred_at >= ?' : '';
+  const params = startMonthKey ? [startMonthKey] : [];
+  const row = await db.getFirstAsync<{ income: number; expense: number }>(
+    `SELECT
+      COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE 0 END), 0) as income,
+      COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END), 0) as expense
+     FROM transactions ${where}`,
+    params,
+  );
+  const income = row?.income ?? 0;
+  const expense = row?.expense ?? 0;
+  return { income, expense, net: income - expense };
+}
+
+/** Expense-by-category breakdown from a start month onward; null = all-time. */
+export async function getExpenseBreakdownByRange(startMonthKey: string | null): Promise<CategoryBreakdown[]> {
+  const db = await getDb();
+  const cond = startMonthKey ? 'AND t.occurred_at >= ?' : '';
+  const params = startMonthKey ? [startMonthKey] : [];
+  return db.getAllAsync<CategoryBreakdown>(
+    `SELECT c.id as category_id, c.name as category_name, c.icon as category_icon, c.color as category_color,
+            SUM(t.amount) as total
+     FROM transactions t
+     JOIN categories c ON c.id = t.category_id
+     WHERE t.type = 'expense' ${cond}
+     GROUP BY c.id
+     ORDER BY total DESC`,
+    params,
+  );
+}
+
 export async function getMonthlyTrend(months: string[]): Promise<MonthSummary[]> {
   const results: MonthSummary[] = [];
   for (const m of months) {
