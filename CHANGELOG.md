@@ -10,6 +10,30 @@ from `package.json` — the single source of truth, from which `versionName` and
 
 ---
 
+## [1.1.1] — 2026-07-24
+
+Cross-device compatibility fixes. All three were only visible on some devices (newer Android
+versions / larger system fonts / fresh installs), so they passed on the primary test device
+but broke on others.
+
+### Fixed
+- **Content drawing under the status bar / camera cutout.** On Android 15+ (target SDK 36 forces
+  edge-to-edge and ignores the status-bar reservation) screen headers overlapped the clock and
+  punch-hole camera. The app now applies the top safe-area inset at the root — self-correcting,
+  so it adds nothing on older Android where the window already sits below the status bar.
+- **Suggestion chips and tab labels truncating to one word** (e.g. "Add Expense" → "Add") on
+  some Android builds. `fontWeight: '500'` text is mis-measured and wraps a word early; the
+  assistant chips and the `SwipeTabs` labels are now single-line.
+- **Fresh installs seeded with only two categories per type.** The v2 data-backfill migration
+  inserted rows into the empty categories table, which defeated the "is it empty?" seed check
+  and left a brand-new device with only a handful of categories. Data-only migrations are now
+  skipped on a fresh install, so a new device gets the full default set.
+
+### Changed
+- **Default income categories are back to just Salary and Freelance** (the friend/gift income
+  categories were removed from the defaults). Existing expense categories, including the new
+  ones, are unchanged.
+
 ## [1.1.0] — 2026-07-23
 
 ### Added

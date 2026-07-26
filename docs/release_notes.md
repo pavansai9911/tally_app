@@ -6,6 +6,18 @@ For the engineering view, see [../CHANGELOG.md](../CHANGELOG.md).
 
 ---
 
+## Version 1.1.1
+
+**Works the same on every phone**
+
+- **Nothing hides behind the status bar or camera anymore.** On some newer phones the top of a
+  screen was slipping under the clock and the camera notch — that's fixed everywhere.
+- **Button labels show in full.** On some phones "Add Expense" and "Add Income" were getting cut
+  down to just "Add"; now the full text always shows.
+- **A brand-new install now has all its categories.** Setting the app up fresh on another phone
+  was leaving only a couple of categories — now you get the complete set from the start. Income
+  categories are Salary and Freelance, as before.
+
 ## Version 1.1.0
 
 **Filters, friendlier dialogs, and smoother swipes**

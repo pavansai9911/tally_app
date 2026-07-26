@@ -346,7 +346,9 @@ function Chip({ label, onPress, index }: { label: string; onPress: () => void; i
           borderWidth: 1, borderColor: colors.accent500, backgroundColor: colors.accentTint,
         }}
       >
-        <Text style={{ ...typography.bodySmallMedium, color: colors.accent500 }}>{label}</Text>
+        {/* numberOfLines={1}: fontWeight '500' text is mis-measured on some Android builds
+            and wraps a word early ("Add Expense" -> "Add"). Keeping it one line avoids that. */}
+        <Text numberOfLines={1} style={{ ...typography.bodySmallMedium, color: colors.accent500 }}>{label}</Text>
       </Pressable>
     </Animated.View>
   );

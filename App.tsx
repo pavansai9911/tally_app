@@ -6,7 +6,7 @@ import {
   DarkTheme,
   Theme,
 } from '@react-navigation/native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
 import { getDb, hasCompletedOnboarding, getSetting } from '@/db';
@@ -24,6 +24,11 @@ type AppPhase = 'loading' | 'onboarding' | 'locked' | 'unlocked';
 
 function AppInner() {
   const { colors, isDark } = useTheme();
+  // Top safe-area inset. On Android 15+/target SDK 36 the OS forces edge-to-edge and ignores
+  // the status-bar reservation, so content would draw under the status bar / camera cutout.
+  // This inset is 0 on older Android (window already sits below the bar), so padding by it is
+  // self-correcting and keeps every screen clear of the status bar on ALL devices.
+  const insets = useSafeAreaInsets();
   const [phase, setPhase] = useState<AppPhase>('loading');
 
   useEffect(() => {
@@ -74,10 +79,10 @@ function AppInner() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.neutral0 }}>
-      {/* Not translucent: on Android a translucent status bar makes screen content draw
-          underneath the clock/icons (the dashboard header was being overlapped). Giving the
-          status bar its own space keeps every screen's header clear. */}
+    <View style={{ flex: 1, backgroundColor: colors.neutral0, paddingTop: insets.top }}>
+      {/* paddingTop: insets.top keeps content below the status bar / camera cutout even when
+          Android 15+ forces edge-to-edge (target SDK 36). The neutral0 background fills the
+          status-bar strip so the bar reads cleanly in both themes. */}
       <StatusBar
         barStyle={isDark ? 'light-content' : 'dark-content'}
         backgroundColor={colors.neutral0}
