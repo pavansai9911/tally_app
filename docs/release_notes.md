@@ -6,6 +6,34 @@ For the engineering view, see [../CHANGELOG.md](../CHANGELOG.md).
 
 ---
 
+## Version 1.2.0
+
+**Never lose your data to a reinstall**
+
+- **Automatic backup, right on your phone.** Tally now quietly keeps a private, encrypted backup
+  of your data in a “Tally-tracker” folder on your device. It never leaves your phone.
+- **Reinstall and pick up where you left off.** If you uninstall Tally and install it again on the
+  same phone, your accounts, transactions, categories, habits, reports and settings come back
+  automatically — no exporting or importing, and no setup screens. It just opens on your data.
+- **The first time you open Tally**, it asks for storage access so it can keep this backup safe.
+  You grant it once (and once again if you ever reinstall). You can turn automatic backup off any
+  time in Settings → Backup & restore, where you'll also see when the last backup ran.
+- **Your sample/demo data is never backed up**, so restoring never brings back practice records.
+- Everything stays offline — the app still has no internet access at all.
+- The older manual backup/restore is still there if you want a file you can move to another phone.
+
+## Version 1.1.1
+
+**Works the same on every phone**
+
+- **Nothing hides behind the status bar or camera anymore.** On some newer phones the top of a
+  screen was slipping under the clock and the camera notch — that's fixed everywhere.
+- **Button labels show in full.** On some phones "Add Expense" and "Add Income" were getting cut
+  down to just "Add"; now the full text always shows.
+- **A brand-new install now has all its categories.** Setting the app up fresh on another phone
+  was leaving only a couple of categories — now you get the complete set from the start. Income
+  categories are Salary and Freelance, as before.
+
 ## Version 1.1.0
 
 **Filters, friendlier dialogs, and smoother swipes**

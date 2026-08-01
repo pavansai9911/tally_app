@@ -9,6 +9,14 @@
 export interface Migration {
   version: number;
   statements: string[];
+  /**
+   * True for migrations that only backfill/adjust DATA for already-installed users (no schema
+   * change). These are skipped on a brand-new install, where `seedDefaultsIfEmpty` creates the
+   * complete, correct default set instead. Without this, a data-backfill migration inserting
+   * rows into the empty table would defeat the "is the table empty?" seed check and leave a
+   * fresh device with only the backfilled rows. See runMigrations() in database.ts.
+   */
+  dataOnly?: boolean;
 }
 
 export const MIGRATIONS: Migration[] = [
@@ -116,7 +124,10 @@ export const MIGRATIONS: Migration[] = [
     // Better default-category colours (only if still at the old grey default, so a user's
     // custom colour is never overwritten) + Entertainment and friend money categories for
     // existing installs. INSERT ... SELECT ... WHERE NOT EXISTS avoids duplicates.
+    // dataOnly: this migration exists ONLY to upgrade already-seeded installs. Fresh installs
+    // skip it and get the correct set from DEFAULT_CATEGORIES via seedDefaultsIfEmpty.
     version: 2,
+    dataOnly: true,
     statements: [
       `UPDATE categories SET color = '#7C4DFF' WHERE name = 'Shopping' AND color = '#4B5159'`,
       `UPDATE categories SET color = '#149C8E' WHERE name = 'Health' AND color = '#6B7280'`,
@@ -148,8 +159,7 @@ export const DEFAULT_CATEGORIES: Array<{ name: string; type: 'expense' | 'income
   { name: 'Health', type: 'expense', icon: 'ti-medical-cross', color: '#149C8E' },
   { name: 'Lent to Friend', type: 'expense', icon: 'ti-users', color: '#F2711C' },
   { name: 'Other', type: 'expense', icon: 'ti-dots', color: '#9AA1A9' },
+  // Income intentionally kept minimal: just Salary and Freelance (no friend/gift categories).
   { name: 'Salary', type: 'income', icon: 'ti-briefcase', color: '#1A9E6B' },
   { name: 'Freelance', type: 'income', icon: 'ti-briefcase', color: '#34C28A' },
-  { name: 'Borrowed from Friend', type: 'income', icon: 'ti-users', color: '#5B79FF' },
-  { name: 'Gift', type: 'income', icon: 'ti-gift', color: '#D6336C' },
 ];

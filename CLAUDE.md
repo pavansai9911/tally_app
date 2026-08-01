@@ -211,7 +211,29 @@ for weeks still produces the right history.
 
 ### Backup / export (`src/services/backup.ts`)
 Portable JSON snapshot of every table via the share sheet; restore replaces all data inside one
-transaction. The PIN salt is never exported. CSV export is separate.
+transaction. The PIN salt is never exported. CSV export is separate. The transactional replace
+lives in `applyBackupObject()` and is shared by manual restore and automatic restore.
+
+### Automatic local backup (`src/services/autoBackup.ts` + native `TallyBackupModule.kt`)
+Keeps an always-current **encrypted** snapshot of the user's **real** data in a public
+`/storage/emulated/0/Tally-tracker/` folder that **survives an uninstall** (app-private storage
+does not). Design points that bite if forgotten:
+- **Why a native module + `MANAGE_EXTERNAL_STORAGE`:** only a public folder outlives an uninstall,
+  and on Android 11+ that needs All-files access. There is **no** zero-permission way. The
+  permission is revoked on uninstall, so it is re-granted once after each reinstall. **INTERNET is
+  still never added** — this is unrelated to network.
+- **Encryption is device-locked:** AES-256-GCM, key = `SHA-256(ANDROID_ID + salt)`. GCM's auth tag
+  is the integrity check; a file copied to another phone won't decrypt (enforces "same device").
+- **Seed data is excluded** via `buildCleanBackupObject()` (filters ids from the seed marker) — a
+  restore must never resurrect sample data.
+- **Trigger:** `src/db/driver.ts` calls a registered mutation listener after any INSERT/UPDATE/
+  DELETE; the service debounces (~1.8s). The listener is registered **only after** the restore
+  decision, and the `auto_backup_last_at` write is suppressed, so backups never loop or clobber a
+  good backup with half-built state.
+- **Restore flow:** `App.tsx` adds a `restore` phase (first launch only). If a valid backup is
+  found it restores and skips onboarding **and** the tour (both come back via the restored
+  `settings`). Corrupt/missing/wrong-device → normal fresh start. `lock_enabled`/`biometric_enabled`
+  are excluded from backups so a restored install never shows a lock with no PIN behind it.
 
 ### Sample data (`src/services/seed.ts`)
 **Developer/testing utility**, exposed in Settings and clearly labelled. Generates realistic
@@ -274,7 +296,8 @@ ideally opt-in, and the offline engine should remain as the fallback.
 | RN 0.81 (not 0.86) | 0.86 requires Node ≥22; the dev machine runs Node 20. |
 | System font, no bundled Inter | Custom font linking was untestable in the build environment; weight-based typography is reliable. |
 | No INTERNET in release | Backs the offline promise. Libraries merge INTERNET (and `SCHEDULE_EXACT_ALARM`) in, so `src/release/AndroidManifest.xml` strips them via `tools:node="remove"`; the debug manifest re-adds INTERNET for Metro. Confirm with `aapt2 dump permissions`. |
-| `allowBackup=false` | A finance app should not auto-sync its DB to Google cloud backup. |
+| `MANAGE_EXTERNAL_STORAGE` added (v1.2.0) | The automatic-backup folder must outlive an uninstall, which on Android 11+ requires All-files access — there is no zero-permission alternative. It grants **no** network access; INTERNET stays stripped. Sideloaded app, so Play's restriction on this permission does not apply. |
+| `allowBackup=false` | A finance app should not auto-sync its DB to Google cloud backup. (This is Android's *cloud* backup; unrelated to Tally's own local Tally-tracker backup.) |
 | SVG assistant avatar | Crisp at any density, themeable, no binary asset, no licensing risk. |
 | Status bar not translucent | Translucent modals break keyboard avoidance on Android and overlapped screen headers. |
 

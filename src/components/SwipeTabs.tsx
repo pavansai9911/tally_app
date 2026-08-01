@@ -102,7 +102,7 @@ export function SwipeTabs({
               accessibilityLabel={label}
               style={{ flex: 1, paddingVertical: 9, alignItems: 'center', zIndex: 1 }}
             >
-              <Animated.Text style={{ ...typography.bodySmallMedium, color: color as unknown as string }}>
+              <Animated.Text numberOfLines={1} style={{ ...typography.bodySmallMedium, color: color as unknown as string }}>
                 {label}
               </Animated.Text>
             </Pressable>

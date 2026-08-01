@@ -41,10 +41,18 @@ export function resetDbHandle(): void {
 async function runMigrations(db: SqlDb): Promise<void> {
   const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
   let current = row?.user_version ?? 0;
+  // A brand-new database is at version 0. Data-only backfill migrations must NOT run on a
+  // fresh install: they would insert rows into the empty categories table and defeat the
+  // "is it empty?" check in seedDefaultsIfEmpty, leaving the device with only those few rows
+  // instead of the full default set. On a fresh install we still advance user_version past
+  // them (so they never re-run later), but skip their statements.
+  const isFreshInstall = current === 0;
   for (const migration of MIGRATIONS) {
     if (migration.version > current) {
-      for (const stmt of migration.statements) {
-        await db.runAsync(stmt);
+      if (!(isFreshInstall && migration.dataOnly)) {
+        for (const stmt of migration.statements) {
+          await db.runAsync(stmt);
+        }
       }
       // PRAGMA cannot be parameterised; version is our own trusted integer.
       await db.execAsync(`PRAGMA user_version = ${migration.version}`);
