@@ -23,6 +23,15 @@ export interface SqlDb {
   getFirstAsync<T = any>(sql: string, params?: unknown[]): Promise<T | null>;
 }
 
+// Optional listener fired after any data mutation (INSERT/UPDATE/DELETE). The automatic-backup
+// service registers one here so a user edit schedules a debounced backup. Kept as a registered
+// callback (not an import) so the low-level driver never depends on the backup service.
+let mutationListener: (() => void) | null = null;
+export function setMutationListener(fn: (() => void) | null): void {
+  mutationListener = fn;
+}
+const MUTATION_RE = /^\s*(insert|update|delete|replace)\b/i;
+
 // op-sqlite rejects `undefined` bind values — coerce them to null. This also fixes the
 // original edit-transaction crash where `occurred_at: undefined` was bound.
 function sanitize(params?: unknown[]): unknown[] {
@@ -57,6 +66,9 @@ export function wrapDb(raw: RawDb): SqlDb {
     },
     async runAsync(sql: string, params?: unknown[]) {
       const res = await run(raw, sql, params);
+      if (mutationListener && MUTATION_RE.test(sql)) {
+        try { mutationListener(); } catch { /* backup scheduling must never break a write */ }
+      }
       return { insertId: res?.insertId, rowsAffected: res?.rowsAffected ?? 0 };
     },
     async getAllAsync<T>(sql: string, params?: unknown[]) {

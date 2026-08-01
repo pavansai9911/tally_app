@@ -1,10 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, SafeAreaView, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Text, SafeAreaView, ScrollView, Pressable, ActivityIndicator, AppState } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
-import { Button } from '@/components/ui';
+import { Button, ToggleSwitch } from '@/components/ui';
 import { useConfirm } from '@/components/ConfirmDialog';
+import {
+  isNativeBackupAvailable, isAutoBackupEnabled, setAutoBackupEnabled, getLastBackupAt,
+  isPermissionGranted, requestPermission, backupNow,
+} from '@/services/autoBackup';
 import { listAccounts, listCategories, updateCategory, setSetting, AccountWithBalance, Category } from '@/db';
 import { CURRENCIES, getActiveCurrency, setActiveCurrency } from '@/utils/currency';
 import { SEED_RANGES, SeedRange, seedSampleData, clearSampleData, hasSampleData } from '@/services/seed';
@@ -33,6 +37,15 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
   const [currencyCode, setCurrencyCode] = useState(getActiveCurrency().code);
   const [seeded, setSeeded] = useState(false);
   const [reminderCount, setReminderCount] = useState(0);
+  const [autoOn, setAutoOn] = useState(true);
+  const [autoGranted, setAutoGranted] = useState(false);
+  const [autoLast, setAutoLast] = useState<string | null>(null);
+
+  const loadAutoBackup = useCallback(async () => {
+    setAutoOn(await isAutoBackupEnabled());
+    setAutoGranted(await isPermissionGranted());
+    setAutoLast(await getLastBackupAt());
+  }, []);
 
   useEffect(() => {
     if (section === 'accounts') listAccounts().then(setAccounts);
@@ -41,7 +54,38 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
     if (section === 'pin') isPinSet().then((set) => setPinStage(set ? 'verify' : 'set'));
     if (section === 'seed') hasSampleData().then(setSeeded);
     if (section === 'reminders') scheduledReminderCount().then(setReminderCount);
-  }, [section]);
+    if (section === 'backup') loadAutoBackup();
+  }, [section, loadAutoBackup]);
+
+  // Re-check permission when returning from the system grant screen.
+  useEffect(() => {
+    if (section !== 'backup') return;
+    const sub = AppState.addEventListener('change', (s) => { if (s === 'active') loadAutoBackup(); });
+    return () => sub.remove();
+  }, [section, loadAutoBackup]);
+
+  async function toggleAutoBackup(v: boolean) {
+    if (v && !(await isPermissionGranted())) {
+      // Turning it on needs storage access first — send the user to grant it.
+      await requestPermission();
+      // The AppState listener re-checks on return; only enable if actually granted.
+      if (!(await isPermissionGranted())) { await loadAutoBackup(); return; }
+    }
+    setAutoOn(v);
+    await setAutoBackupEnabled(v);
+    if (v) { setBusy('autobackup'); await backupNow(); setBusy(null); }
+    await loadAutoBackup();
+  }
+
+  async function handleBackupNow() {
+    setBusy('autobackup');
+    const ok = await backupNow();
+    setBusy(null);
+    await loadAutoBackup();
+    if (!ok) {
+      confirm({ title: 'Backup not saved', message: 'Storage access is needed to keep an automatic backup. Turn on “Automatic backup” to grant it.', icon: 'alert-circle', tone: 'danger' });
+    }
+  }
 
   async function runSeed(range: SeedRange, label: string) {
     setBusy('seed');
@@ -265,8 +309,45 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
 
         {section === 'backup' && (
           <View>
+            {isNativeBackupAvailable() && (
+              <View style={{ padding: 16, borderRadius: radius.lg, backgroundColor: colors.surfaceSunken, marginBottom: 20 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View style={{ flex: 1, paddingRight: 12 }}>
+                    <Text style={{ ...typography.bodyMedium, color: colors.neutral900 }}>Automatic backup</Text>
+                    <Text style={{ ...typography.caption, color: colors.neutral500, marginTop: 3, lineHeight: 16 }}>
+                      Keeps a private, encrypted backup in a “Tally-tracker” folder on this device, so your data returns automatically after a reinstall.
+                    </Text>
+                  </View>
+                  <ToggleSwitch value={autoOn} onValueChange={toggleAutoBackup} />
+                </View>
+                <View style={{ height: 0.5, backgroundColor: colors.surfaceBorder, marginVertical: 12 }} />
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Feather
+                    name={autoOn && autoGranted ? 'check-circle' : 'alert-circle'}
+                    size={14}
+                    color={autoOn && autoGranted ? colors.income : colors.warning}
+                  />
+                  <Text style={{ ...typography.caption, color: colors.neutral500, flex: 1 }}>
+                    {!autoOn
+                      ? 'Automatic backup is off.'
+                      : !autoGranted
+                        ? 'Storage access needed — toggle on to grant it.'
+                        : autoLast
+                          ? `Last backup ${relativeTime(autoLast)}.`
+                          : 'Backup will run after your next change.'}
+                  </Text>
+                </View>
+                {autoOn && autoGranted && (
+                  <Pressable onPress={handleBackupNow} disabled={busy === 'autobackup'} style={{ marginTop: 12, alignSelf: 'flex-start' }}>
+                    <Text style={{ ...typography.bodySmallMedium, color: colors.accent500 }}>
+                      {busy === 'autobackup' ? 'Backing up…' : 'Back up now'}
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
             <Text style={{ ...typography.body, color: colors.neutral500, marginBottom: 20, lineHeight: 21 }}>
-              Tally keeps everything on this device only. Save a backup file somewhere safe (your files, email, or a cloud drive), then restore it on a new phone or after reinstalling.
+              You can also save a manual backup file somewhere safe (your files, email, or a cloud drive), then restore it on a new phone or after reinstalling.
             </Text>
             <View style={{ gap: 12 }}>
               <Button label={busy === 'backup' ? 'Preparing…' : 'Create backup'} onPress={handleExportBackup} icon={<Feather name="download" size={17} color="#FFFFFF" />} />
@@ -395,4 +476,18 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+/** Short, ICU-free "how long ago" label for a stored ISO timestamp. */
+function relativeTime(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (!then || Number.isNaN(then)) return 'recently';
+  const secs = Math.max(0, Math.floor((Date.now() - then) / 1000));
+  if (secs < 60) return 'just now';
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return `${mins} min ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
 }

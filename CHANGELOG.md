@@ -10,6 +10,35 @@ from `package.json` — the single source of truth, from which `versionName` and
 
 ---
 
+## [1.2.0] — 2026-07-26
+
+### Added
+- **Automatic local backup & restore.** Tally now keeps an always-current, encrypted backup of
+  your real data in a public `Tally-tracker` folder that **survives an uninstall**. Reinstall the
+  app on the same device and your data comes back automatically — no manual export/import, no
+  onboarding, no tour; it opens straight on your data as if nothing happened.
+  - **Encrypted & device-locked.** AES-256-GCM with a key derived from the device's `ANDROID_ID`.
+    GCM's auth tag doubles as an integrity check, and a file copied to another phone won't
+    decrypt — which enforces the "same device only" rule automatically.
+  - **Continuous & debounced.** Any data change schedules a single background backup ~1.8s later,
+    so bursts of edits coalesce and there's no noticeable performance impact.
+  - **Seed-safe.** Sample/demo data is **excluded** from the automatic backup, so a restore never
+    resurrects seeded records — even if sample data was present on the last install.
+  - **Graceful.** A missing, corrupt, tampered, or wrong-device backup simply results in a normal
+    fresh start (no crash). Factory reset or deleting the folder = fresh install.
+  - **Opt-out.** New "Automatic backup" toggle in Settings → Backup & restore, with last-backup
+    status and a "Back up now" action. On by default (once storage access is granted).
+- New Android permission: **`MANAGE_EXTERNAL_STORAGE`** (All-files access), required so the backup
+  can live in a folder that outlives an uninstall. Requested once at first launch (and once more
+  after a reinstall — Android revokes it on uninstall). **INTERNET is still not present** — the app
+  remains fully offline.
+
+### Changed
+- The **manual** Backup & Restore feature is unchanged and coexists with automatic backup.
+- Restore (manual or automatic) no longer carries `lock_enabled` / `biometric_enabled`, so a
+  restored install never shows a phantom-enabled lock with no PIN behind it — you re-enable the
+  lock and set a new PIN (the PIN itself can't survive a reinstall; it lives in the OS keychain).
+
 ## [1.1.1] — 2026-07-24
 
 Cross-device compatibility fixes. All three were only visible on some devices (newer Android

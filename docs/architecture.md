@@ -120,9 +120,12 @@ card so the tour can never stall.
 | `lock.ts` | PIN hashing/verification via keychain, biometric prompts, lock/biometric flags. |
 | `notifications.ts` | Habit reminder scheduling (daily / per-weekday), channel + sound, rebuild-on-launch, diagnostics. |
 | `recurring.ts` | Inserts due auto-add transactions, catching up every missed occurrence. |
-| `backup.ts` | JSON export/restore of all tables (excludes the PIN salt) and CSV export. |
+| `backup.ts` | Manual JSON export/restore of all tables (excludes PIN salt + lock flags) and CSV export. `applyBackupObject()` (transactional replace) and `buildCleanBackupObject()` (seed-excluded snapshot) are shared with auto-backup. |
+| `autoBackup.ts` | Automatic encrypted local backup/restore to the `Tally-tracker` folder via the native `TallyBackupModule`. Debounced on data change (driver mutation listener), device-locked AES-256-GCM, seed-excluded, restore on first launch. Coexists with manual backup. |
 | `seed.ts` | Developer sample-data generator; records created ids so a re-run replaces rather than duplicates. |
 | `startup.ts` | Orchestrates per-launch work. |
+
+**Native module** `android/app/src/main/java/com/tally/app/TallyBackupModule.kt` (+ `TallyBackupPackage`): All-files-access check/request, `ANDROID_ID`, and AES-256-GCM encrypt/decrypt + atomic file I/O to the public backup folder. It is the only place that writes outside app-private storage. The DB `driver.ts` exposes `setMutationListener` so `autoBackup` can schedule a backup after any write without the driver depending on the service.
 
 ---
 
