@@ -11,15 +11,32 @@ import { useTour } from '@/tour/TourProvider';
 import { AssistantFab } from '@/components/assistant/AssistantFab';
 import { AssistantSheet } from '@/components/assistant/AssistantSheet';
 import { PeriodMenu } from '@/components/PeriodMenu';
+import { AccountMenu, AccountOption } from '@/components/AccountMenu';
 import { mapIcon } from '@/utils/iconMap';
 import { formatCurrency, monthKey, todayKey, formatWeekdayLong, formatStoredTime } from '@/utils/format';
 import { PeriodKey, periodStartKey } from '@/utils/period';
 import {
-  getMonthSummary, getRangeSummary, getTotalBalance, listBudgetsWithSpend, listTransactions,
-  getTodayHabitsWithStatus, upsertLog, deleteLog,
-  MonthSummary, BudgetWithSpend, TransactionWithDetails,
+  getMonthSummary, getRangeSummary, getTotalBalance, getAccountBalance, listBudgetsWithSpend,
+  listTransactions, listAccountTransactions, listAccounts, getTodayHabitsWithStatus, upsertLog, deleteLog,
+  getSetting, setSetting, MonthSummary, BudgetWithSpend,
 } from '@/db';
 import { RootStackParamList } from '@/navigation/RootNavigator';
+
+const DASHBOARD_ACCOUNT_KEY = 'dashboard_account';
+
+// Unified recent-activity item so the same row renders whether we're showing all accounts or one
+// (a transfer is 'in' for the receiving account and 'out' for the sending account).
+type Recent = {
+  id: string;
+  title: string;
+  icon: string;
+  color: string | null;
+  isTransfer: boolean;
+  dir: 'in' | 'out';
+  amount: number;
+  note: string | null;
+  occurred_at: string;
+};
 
 type Nav = CompositeNavigationProp<BottomTabNavigationProp<ParamListBase>, NativeStackNavigationProp<RootStackParamList>>;
 
@@ -34,24 +51,76 @@ export default function DashboardScreen() {
   const [totalBalance, setTotalBalance] = useState(0);
   const [budgets, setBudgets] = useState<BudgetWithSpend[]>([]);
   const [habits, setHabits] = useState<Awaited<ReturnType<typeof getTodayHabitsWithStatus>>>([]);
-  const [recentTx, setRecentTx] = useState<TransactionWithDetails[]>([]);
+  const [recentTx, setRecentTx] = useState<Recent[]>([]);
   // Hero income/expense/net window. Total balance always stays all-time regardless.
   const [period, setPeriod] = useState<PeriodKey>('month');
+  // Home account filter (#9): null = All accounts. Persisted so it survives an app restart.
+  const [account, setAccount] = useState<string | null>(null);
+  const [accounts, setAccounts] = useState<AccountOption[]>([]);
 
-  // Recompute only the hero summary when the period changes (cheap, SQL-aggregated).
-  const loadSummary = useCallback(async (p: PeriodKey) => {
-    setSummary(p === 'month' ? await getMonthSummary(monthKey()) : await getRangeSummary(periodStartKey(p)));
+  // Recompute only the hero summary when the period/account changes (cheap, SQL-aggregated).
+  const loadSummary = useCallback(async (p: PeriodKey, acc: string | null) => {
+    setSummary(p === 'month'
+      ? await getMonthSummary(monthKey(), acc ?? undefined)
+      : await getRangeSummary(periodStartKey(p), acc ?? undefined));
   }, []);
 
   const load = useCallback(async () => {
-    await loadSummary(period);
-    setTotalBalance(await getTotalBalance());
+    // Keep the account dropdown current (a new account should appear without an app restart).
+    const accs = await listAccounts();
+    setAccounts(accs.map(a => ({ id: a.id, name: a.name, icon: a.icon, color: a.color })));
+    await loadSummary(period, account);
+    // Balance + recents follow the selected account; budgets stay all-accounts.
+    setTotalBalance(account ? await getAccountBalance(account) : await getTotalBalance());
     setBudgets((await listBudgetsWithSpend(monthKey())).slice(0, 2));
     setHabits(await getTodayHabitsWithStatus(todayKey()));
-    setRecentTx((await listTransactions(5)));
-  }, [loadSummary, period]);
+    if (account) {
+      const rows = await listAccountTransactions(account, { limit: 5 });
+      setRecentTx(rows.map(t => ({
+        id: t.id,
+        title: t.type === 'transfer'
+          ? (t.counterparty_name ? `Transfer ${t.direction === 'out' ? 'to' : 'from'} ${t.counterparty_name}` : 'Transfer')
+          : (t.category_name || (t.type === 'income' ? 'Income' : 'Transaction')),
+        icon: t.category_icon ?? 'ti-dots',
+        color: t.type === 'transfer' ? null : t.category_color,
+        isTransfer: t.type === 'transfer',
+        dir: t.direction,
+        amount: t.amount,
+        note: t.note,
+        occurred_at: t.occurred_at,
+      })));
+    } else {
+      const rows = await listTransactions(5);
+      setRecentTx(rows.map(t => ({
+        id: t.id,
+        title: t.category_name || (t.type === 'transfer' ? 'Transfer' : 'Transaction'),
+        icon: t.category_icon ?? 'ti-dots',
+        color: t.category_color,
+        isTransfer: t.type === 'transfer',
+        dir: t.type === 'income' ? 'in' : 'out',
+        amount: t.amount,
+        note: t.note,
+        occurred_at: t.occurred_at,
+      })));
+    }
+  }, [loadSummary, period, account]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  // Load the account list + the persisted filter once. Refreshed accounts also come via load().
+  React.useEffect(() => {
+    (async () => {
+      const accs = await listAccounts();
+      setAccounts(accs.map(a => ({ id: a.id, name: a.name, icon: a.icon, color: a.color })));
+      const saved = await getSetting(DASHBOARD_ACCOUNT_KEY);
+      if (saved && saved !== 'all' && accs.some(a => a.id === saved)) setAccount(saved);
+    })();
+  }, []);
+
+  const onChangeAccount = useCallback((id: string | null) => {
+    setAccount(id);
+    setSetting(DASHBOARD_ACCOUNT_KEY, id ?? 'all').catch(() => {});
+  }, []);
 
   // Let the tour scroll Home so an off-screen highlight becomes visible.
   React.useEffect(() => {
@@ -112,7 +181,10 @@ export default function DashboardScreen() {
             <>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                 <Text style={{ ...typography.caption, color: colors.neutral400, textTransform: 'uppercase' }}>Overview</Text>
-                <PeriodMenu value={period} onChange={(p) => { setPeriod(p); loadSummary(p); }} variant="onDark" />
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  {accounts.length > 0 && <AccountMenu accounts={accounts} value={account} onChange={onChangeAccount} variant="onDark" />}
+                  <PeriodMenu value={period} onChange={setPeriod} variant="onDark" />
+                </View>
               </View>
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <MiniStat label="Income" value={formatCurrency(summary.income)} icon="arrow-down-left" bg="#13301F" fg={colors.income} />
@@ -200,23 +272,23 @@ export default function DashboardScreen() {
                 key={t.id}
                 onPress={() => navigation.navigate('Money', { screen: 'TransactionDetail', params: { id: t.id } })}
                 accessibilityRole="button"
-                accessibilityLabel={`View transaction ${t.note || t.category_name}`}
+                accessibilityLabel={`View ${t.title}`}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderBottomWidth: i === recentTx.length - 1 ? 0 : 0.5, borderBottomColor: colors.surfaceBorder }}
               >
-                <View style={{ width: 30, height: 30, borderRadius: 9, backgroundColor: (t.category_color ?? colors.neutral400) + '22', alignItems: 'center', justifyContent: 'center' }}>
-                  <Feather name={mapIcon(t.category_icon ?? 'ti-dots')} size={14} color={t.category_color ?? colors.neutral500} />
+                <View style={{ width: 30, height: 30, borderRadius: 9, backgroundColor: t.isTransfer ? colors.neutral50 : (t.color ?? colors.neutral400) + '22', alignItems: 'center', justifyContent: 'center' }}>
+                  <Feather name={t.isTransfer ? 'repeat' : mapIcon(t.icon)} size={14} color={t.isTransfer ? colors.neutral500 : (t.color ?? colors.neutral500)} />
                 </View>
-                {/* Category is the title; time + note preview form the subtitle. */}
+                {/* Category (or transfer label) is the title; time + note preview form the subtitle. */}
                 <View style={{ flex: 1 }}>
                   <Text style={{ ...typography.bodySmallMedium, color: colors.neutral900 }} numberOfLines={1} ellipsizeMode="tail">
-                    {t.category_name || (t.type === 'transfer' ? 'Transfer' : 'Transaction')}
+                    {t.title}
                   </Text>
                   <Text style={{ ...typography.caption, color: colors.neutral400 }} numberOfLines={1} ellipsizeMode="tail">
-                    {[formatStoredTime(t.occurred_at), t.note].filter(Boolean).join(' · ') || t.account_name}
+                    {[formatStoredTime(t.occurred_at), t.note].filter(Boolean).join(' · ') || '—'}
                   </Text>
                 </View>
-                <Text style={{ ...typography.bodySmallMedium, color: t.type === 'income' ? colors.income : colors.expense }}>
-                  {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount).replace('-', '')}
+                <Text style={{ ...typography.bodySmallMedium, color: t.dir === 'in' ? colors.income : colors.expense }}>
+                  {t.dir === 'in' ? '+' : '-'}{formatCurrency(t.amount).replace('-', '')}
                 </Text>
               </Pressable>
             ))}

@@ -16,6 +16,7 @@ import LockScreen from '@/screens/lock/LockScreen';
 import RestoreGateScreen from '@/screens/onboarding/RestoreGateScreen';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ConfirmProvider } from '@/components/ConfirmDialog';
+import { AppControlProvider } from '@/components/AppControl';
 import { TourProvider } from '@/tour/TourProvider';
 import { runStartupTasks } from '@/services/startup';
 import { initAutoBackup, backupNow } from '@/services/autoBackup';
@@ -34,6 +35,9 @@ function AppInner() {
   // self-correcting and keeps every screen clear of the status bar on ALL devices.
   const insets = useSafeAreaInsets();
   const [phase, setPhase] = useState<AppPhase>('loading');
+  // Bumped to force the launch flow to run again (used by Hard Reset to return to fresh state).
+  const [bootId, setBootId] = useState(0);
+  const restart = useCallback(() => { setPhase('loading'); setBootId(n => n + 1); }, []);
 
   // Post-setup entry: apply currency, arm auto-backup, run launch tasks, then reveal the app
   // (locked only if a real credential exists). Shared by a normal launch and a completed restore.
@@ -65,7 +69,7 @@ function AppInner() {
         setPhase('onboarding');
       }
     })();
-  }, [enterApp]);
+  }, [enterApp, bootId]);
 
   // Restore gate finished with a successful auto-restore: continue as an already-onboarded launch.
   const handleRestored = useCallback(() => { enterApp().catch(() => setPhase('onboarding')); }, [enterApp]);
@@ -104,6 +108,7 @@ function AppInner() {
   }
 
   return (
+    <AppControlProvider value={{ restart }}>
     <View style={{ flex: 1, backgroundColor: colors.neutral0, paddingTop: insets.top }}>
       {/* paddingTop: insets.top keeps content below the status bar / camera cutout even when
           Android 15+ forces edge-to-edge (target SDK 36). The neutral0 background fills the
@@ -124,6 +129,7 @@ function AppInner() {
         </NavigationContainer>
       )}
     </View>
+    </AppControlProvider>
   );
 }
 

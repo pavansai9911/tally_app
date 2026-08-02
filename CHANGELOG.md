@@ -10,6 +10,38 @@ from `package.json` — the single source of truth, from which `versionName` and
 
 ---
 
+## [1.3.0] — 2026-08-02
+
+### Added
+- **Home account filter.** A new **Account** dropdown on the hero (between Overview and the
+  period) scopes Total Balance, the income/expense/net overview and Recent transactions to a
+  single account, or “All accounts”. The choice is **persisted** across app restarts. Budgets
+  stay all-accounts (they’re per-category).
+- **Drag-to-reorder categories.** Long-lived custom reorder (grip handle) for both Expense and
+  Income categories, saved instantly — built with PanResponder/Animated, no new native
+  dependency. New categories appear at the top; **“Other” is pinned to the bottom** and can’t be
+  moved.
+- **Account IN / OUT filter.** On an account’s detail screen the IN and OUT cards are now tap
+  filters (tap to show only that direction, tap again to reset to All).
+- **Edit a category from Reports.** The expense-breakdown drill-down has an edit icon that opens
+  that category’s edit screen (stays in the Reports tab).
+- **Hard Reset** (Settings → Danger zone). A production-grade, irreversible wipe: a warning
+  dialog, then a type-**DELETE**-to-confirm screen. Erases all data, the PIN, **and the
+  automatic backup**, returning the app to a genuine fresh-install state.
+
+### Fixed
+- **Transfers now show correctly in the account view (#10).** An account that received a
+  transfer shows it as **IN**; the sending account shows it as **OUT**. The account balance and
+  IN/OUT totals include transfers (previously they were ignored, so a transferred-into account
+  showed the wrong balance).
+- **Account transaction rows lead with the Category** (not the note) and are now **tappable** —
+  they open the transaction details.
+- **Long notes** on the transaction details screen get a dedicated full-width block instead of
+  being squeezed into a right-aligned column.
+- **“Other” no longer drifts** when you add categories — it always stays at the bottom.
+- **Deleting a default category is now remembered** (a tombstone keyed by a stable `default_key`),
+  so a future app update won’t recreate it.
+
 ## [1.2.0] — 2026-07-26
 
 ### Added

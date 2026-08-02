@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, SafeAreaView, ScrollView, Pressable, ActivityIndicator, AppState } from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, Pressable, ActivityIndicator, AppState, TextInput } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -9,6 +9,8 @@ import {
   isNativeBackupAvailable, isAutoBackupEnabled, setAutoBackupEnabled, getLastBackupAt,
   isPermissionGranted, requestPermission, backupNow,
 } from '@/services/autoBackup';
+import { hardResetAllData } from '@/services/reset';
+import { useAppControl } from '@/components/AppControl';
 import { listAccounts, listCategories, updateCategory, setSetting, AccountWithBalance, Category } from '@/db';
 import { CURRENCIES, getActiveCurrency, setActiveCurrency } from '@/utils/currency';
 import { SEED_RANGES, SeedRange, seedSampleData, clearSampleData, hasSampleData } from '@/services/seed';
@@ -40,6 +42,19 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
   const [autoOn, setAutoOn] = useState(true);
   const [autoGranted, setAutoGranted] = useState(false);
   const [autoLast, setAutoLast] = useState<string | null>(null);
+  const [resetInput, setResetInput] = useState('');
+  const { restart } = useAppControl();
+
+  async function handleHardReset() {
+    setBusy('reset');
+    try {
+      await hardResetAllData();
+    } finally {
+      setBusy(null);
+    }
+    // Re-run the launch flow from scratch: re-seeds defaults, shows onboarding, no backup to restore.
+    restart();
+  }
 
   const loadAutoBackup = useCallback(async () => {
     setAutoOn(await isAutoBackupEnabled());
@@ -130,6 +145,7 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
     currency: 'Currency', theme: 'Theme', pin: 'App PIN', accounts: 'Manage accounts',
     seed: 'Seed sample data', reminders: 'Reminder diagnostics',
     categories: 'Manage categories', export: 'Export data', backup: 'Backup & restore', privacy: 'Privacy',
+    reset: 'Hard reset',
   };
 
   // Dedicated full-screen PIN flow: verify current PIN (if set) -> set new PIN.
@@ -472,6 +488,42 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
           <Text style={{ ...typography.body, color: colors.neutral500, lineHeight: 21 }}>
             Tally stores all your data locally on this device only. Nothing is sent to any server, no account is required, and there is no analytics or ad tracking. Your PIN is stored securely in the device keychain, never in plain text.
           </Text>
+        )}
+
+        {section === 'reset' && (
+          <View>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 14, borderRadius: radius.md, backgroundColor: colors.expenseTint, marginBottom: 18 }}>
+              <Feather name="alert-triangle" size={18} color={colors.expense} style={{ marginTop: 1 }} />
+              <Text style={{ ...typography.bodySmall, color: colors.neutral900, flex: 1, lineHeight: 20 }}>
+                This permanently erases everything on this device — all accounts, transactions, categories, budgets, habits, reminders and settings — and deletes the automatic backup. There is no undo, and it cannot be recovered on a reinstall.
+              </Text>
+            </View>
+
+            <Text style={{ ...typography.bodySmall, color: colors.neutral600, marginBottom: 8 }}>
+              Type <Text style={{ fontWeight: '700', color: colors.neutral900 }}>DELETE</Text> to confirm.
+            </Text>
+            <TextInput
+              value={resetInput}
+              onChangeText={setResetInput}
+              placeholder="DELETE"
+              placeholderTextColor={colors.neutral400}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              editable={busy !== 'reset'}
+              style={{ ...typography.bodyMedium, color: colors.neutral900, backgroundColor: colors.surfaceSunken, borderRadius: radius.md, borderWidth: 1, borderColor: resetInput === 'DELETE' ? colors.expense : colors.surfaceBorder, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 18 }}
+            />
+
+            <Pressable
+              onPress={handleHardReset}
+              disabled={resetInput !== 'DELETE' || busy === 'reset'}
+              style={{ height: 52, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, backgroundColor: resetInput === 'DELETE' ? colors.expense : colors.neutral200 }}
+            >
+              {busy === 'reset' && <ActivityIndicator color="#FFFFFF" />}
+              <Text style={{ ...typography.button, color: resetInput === 'DELETE' ? '#FFFFFF' : colors.neutral400 }}>
+                {busy === 'reset' ? 'Erasing…' : 'Permanently erase everything'}
+              </Text>
+            </Pressable>
+          </View>
         )}
       </ScrollView>
     </SafeAreaView>

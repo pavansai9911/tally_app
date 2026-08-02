@@ -6,6 +6,26 @@ For the engineering view, see [../CHANGELOG.md](../CHANGELOG.md).
 
 ---
 
+## Version 1.3.0
+
+**Account filtering, category reordering, and a clean-slate reset**
+
+- **See one account at a time on Home.** A new Account dropdown on the balance card lets you
+  focus the balance, the income/expense/net summary and recent activity on a single account —
+  and it remembers your choice next time you open the app.
+- **Put categories in your own order.** Drag the handle next to a category to reorder it (works
+  for both Expense and Income). New categories start at the top, and “Other” always stays last.
+- **Filter an account by In or Out.** Open an account and tap IN or OUT to see only money coming
+  in or going out; tap again to see everything.
+- **Transfers look right everywhere.** A transfer now shows as OUT on the account it left and IN
+  on the account it reached, and account balances count transfers correctly.
+- **Edit a category straight from Reports.** Tap a slice in the expense breakdown, then the edit
+  icon, to rename or recolour that category.
+- **Cleaner transaction details.** Long notes now have room to breathe and are easy to read.
+- **Start over if you want to.** Settings now has a Hard Reset that wipes everything — including
+  the automatic backup — after you type DELETE to confirm. Useful if you ever want to stop using
+  the on-device backup and begin completely fresh.
+
 ## Version 1.2.0
 
 **Never lose your data to a reinstall**

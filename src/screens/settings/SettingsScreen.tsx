@@ -150,6 +150,26 @@ export default function SettingsScreen({ navigation }: Props) {
           <Row label="Version" value={APP_VERSION} onPress={() => {}} />
           <Row label="Privacy" value="" onPress={() => navigation.navigate('SettingsSub', { section: 'privacy' })} last />
         </Card>
+
+        <SectionLabel title="Danger zone" />
+        <Card>
+          <Pressable
+            onPress={() => confirm({
+              title: 'Hard reset?',
+              message: 'This permanently deletes ALL data on this device — accounts, transactions, categories, habits and settings — and removes the automatic backup. This cannot be undone.',
+              icon: 'alert-triangle',
+              tone: 'danger',
+              buttons: [
+                { text: 'Continue', style: 'destructive', onPress: () => navigation.navigate('SettingsSub', { section: 'reset' }) },
+                { text: 'Cancel', style: 'cancel' },
+              ],
+            })}
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14 }}
+          >
+            <Text style={{ ...typography.bodyMedium, color: colors.expense }}>Hard reset (erase everything)</Text>
+            <Feather name="alert-triangle" size={16} color={colors.expense} />
+          </Pressable>
+        </Card>
       </ScrollView>
     </SafeAreaView>
   );

@@ -146,20 +146,45 @@ export const MIGRATIONS: Migration[] = [
          WHERE NOT EXISTS (SELECT 1 FROM categories WHERE name = 'Gift' AND type = 'income')`,
     ],
   },
+  {
+    // Category ordering + default-identity support.
+    //  - `default_key`: a stable id for each seeded default (survives renames), used to pin
+    //    "Other" to the bottom and to respect a user's deletion of a default across updates.
+    //  - `sort_order = rowid`: freezes the current display order so newly-created categories can
+    //    be placed ABOVE existing ones (createCategory assigns MIN(sort_order)-1) and drag-drop
+    //    reordering has real values to rewrite. On a fresh install these no-op (empty table) and
+    //    seedDefaultsIfEmpty assigns default_key + sort_order directly.
+    version: 3,
+    statements: [
+      `ALTER TABLE categories ADD COLUMN default_key TEXT`,
+      `UPDATE categories SET default_key = 'food_dining'    WHERE default_key IS NULL AND type='expense' AND name='Food & Dining'`,
+      `UPDATE categories SET default_key = 'transport'      WHERE default_key IS NULL AND type='expense' AND name='Transport'`,
+      `UPDATE categories SET default_key = 'shopping'       WHERE default_key IS NULL AND type='expense' AND name='Shopping'`,
+      `UPDATE categories SET default_key = 'entertainment'  WHERE default_key IS NULL AND type='expense' AND name='Entertainment'`,
+      `UPDATE categories SET default_key = 'utilities'      WHERE default_key IS NULL AND type='expense' AND name='Utilities'`,
+      `UPDATE categories SET default_key = 'health'         WHERE default_key IS NULL AND type='expense' AND name='Health'`,
+      `UPDATE categories SET default_key = 'lent_to_friend' WHERE default_key IS NULL AND type='expense' AND name='Lent to Friend'`,
+      `UPDATE categories SET default_key = 'other'          WHERE default_key IS NULL AND type='expense' AND name='Other'`,
+      `UPDATE categories SET default_key = 'salary'         WHERE default_key IS NULL AND type='income'  AND name='Salary'`,
+      `UPDATE categories SET default_key = 'freelance'      WHERE default_key IS NULL AND type='income'  AND name='Freelance'`,
+      `UPDATE categories SET sort_order = rowid`,
+    ],
+  },
 ];
 
 export const LATEST_SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1].version;
 
-export const DEFAULT_CATEGORIES: Array<{ name: string; type: 'expense' | 'income'; icon: string; color: string }> = [
-  { name: 'Food & Dining', type: 'expense', icon: 'ti-tools-kitchen-2', color: '#E0473F' },
-  { name: 'Transport', type: 'expense', icon: 'ti-car', color: '#3D5AFE' },
-  { name: 'Shopping', type: 'expense', icon: 'ti-shopping-bag', color: '#7C4DFF' },
-  { name: 'Entertainment', type: 'expense', icon: 'ti-device-tv', color: '#D6336C' },
-  { name: 'Utilities', type: 'expense', icon: 'ti-bolt', color: '#C98A1B' },
-  { name: 'Health', type: 'expense', icon: 'ti-medical-cross', color: '#149C8E' },
-  { name: 'Lent to Friend', type: 'expense', icon: 'ti-users', color: '#F2711C' },
-  { name: 'Other', type: 'expense', icon: 'ti-dots', color: '#9AA1A9' },
+export const DEFAULT_CATEGORIES: Array<{ name: string; type: 'expense' | 'income'; icon: string; color: string; key: string }> = [
+  { name: 'Food & Dining', type: 'expense', icon: 'ti-tools-kitchen-2', color: '#E0473F', key: 'food_dining' },
+  { name: 'Transport', type: 'expense', icon: 'ti-car', color: '#3D5AFE', key: 'transport' },
+  { name: 'Shopping', type: 'expense', icon: 'ti-shopping-bag', color: '#7C4DFF', key: 'shopping' },
+  { name: 'Entertainment', type: 'expense', icon: 'ti-device-tv', color: '#D6336C', key: 'entertainment' },
+  { name: 'Utilities', type: 'expense', icon: 'ti-bolt', color: '#C98A1B', key: 'utilities' },
+  { name: 'Health', type: 'expense', icon: 'ti-medical-cross', color: '#149C8E', key: 'health' },
+  { name: 'Lent to Friend', type: 'expense', icon: 'ti-users', color: '#F2711C', key: 'lent_to_friend' },
+  // 'Other' is always kept at the bottom of the expense list (pinned by default_key in queries).
+  { name: 'Other', type: 'expense', icon: 'ti-dots', color: '#9AA1A9', key: 'other' },
   // Income intentionally kept minimal: just Salary and Freelance (no friend/gift categories).
-  { name: 'Salary', type: 'income', icon: 'ti-briefcase', color: '#1A9E6B' },
-  { name: 'Freelance', type: 'income', icon: 'ti-briefcase', color: '#34C28A' },
+  { name: 'Salary', type: 'income', icon: 'ti-briefcase', color: '#1A9E6B', key: 'salary' },
+  { name: 'Freelance', type: 'income', icon: 'ti-briefcase', color: '#34C28A', key: 'freelance' },
 ];

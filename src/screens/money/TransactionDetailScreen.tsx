@@ -84,8 +84,15 @@ export default function TransactionDetailScreen({ navigation, route }: Props) {
           <Row label="Category" value={tx.category_name ?? '—'} />
           <Row label="Account" value={tx.account_name} />
           <Row label="Date" value={formatFullDate(tx.occurred_at)} />
-          <Row label="Time" value={formatStoredTime(tx.occurred_at) || '—'} />
-          <Row label="Note" value={tx.note ?? '—'} last />
+          <Row label="Time" value={formatStoredTime(tx.occurred_at) || '—'} last={!tx.note} />
+          {/* Notes get their own full-width block (label above, text below) so long notes stay
+              readable instead of being squeezed into a right-aligned value column. */}
+          {tx.note ? (
+            <View style={{ paddingVertical: 14 }}>
+              <Text style={{ ...typography.caption, color: colors.neutral500, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8 }}>Note</Text>
+              <Text style={{ ...typography.body, color: colors.neutral900, lineHeight: 22 }}>{tx.note}</Text>
+            </View>
+          ) : null}
         </View>
       </View>
 

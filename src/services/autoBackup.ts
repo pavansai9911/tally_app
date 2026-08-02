@@ -124,6 +124,25 @@ export async function backupNow(): Promise<boolean> {
   return performBackup();
 }
 
+/** Delete the on-device backup file (used by Hard Reset). */
+export async function deleteAutoBackupFile(): Promise<void> {
+  if (!Native) return;
+  try { await Native.deleteBackup(); } catch { /* ignore */ }
+}
+
+/**
+ * Fully detach auto-backup (used by Hard Reset before wiping): unregister the mutation listener
+ * so the wipe doesn't schedule a backup, cancel any pending write, and reset init state so a
+ * later initAutoBackup() re-arms cleanly as if the app had just launched.
+ */
+export function resetAutoBackupState(): void {
+  if (debounceTimer) { clearTimeout(debounceTimer); debounceTimer = null; }
+  suppressed = false;
+  enabledCache = true;
+  initialized = false;
+  setMutationListener(null);
+}
+
 /**
  * Attempt an automatic restore from the Tally-tracker backup. Returns true only if valid data
  * was restored. The native layer returns null for a missing/corrupt/wrong-device backup, so an

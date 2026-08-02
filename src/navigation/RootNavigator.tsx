@@ -64,6 +64,9 @@ export type ReportsStackParamList = {
   Reports: undefined;
   CategoryDrilldown: { categoryId: string; monthKey: string };
   SingleHabitReport: { habitId: string };
+  // Also reachable here (edit a category from the expense-breakdown drilldown) so the user
+  // stays in the Reports tab instead of being thrown over to Money.
+  AddEditCategory: { id?: string } | undefined;
 };
 
 export type RootStackParamList = {
@@ -124,6 +127,9 @@ function ReportsNavigator() {
       <ReportsStack.Screen name="Reports" component={ReportsScreen} />
       <ReportsStack.Screen name="CategoryDrilldown" component={CategoryDrilldownScreen} />
       <ReportsStack.Screen name="SingleHabitReport" component={SingleHabitReportScreen} />
+      {/* AddEditCategoryScreen is stack-agnostic (uses only route.params.id + goBack); the cast
+          lets the Money-typed screen be reused here without duplicating it. */}
+      <ReportsStack.Screen name="AddEditCategory" component={AddEditCategoryScreen as any} options={modalOptions} />
     </ReportsStack.Navigator>
   );
 }

@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, SafeAreaView, ScrollView, Pressable } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
+import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { mapIcon } from '@/utils/iconMap';
@@ -18,7 +19,9 @@ export default function CategoryDrilldownScreen({ navigation, route }: Props) {
   const [total, setTotal] = useState(0);
   const [pctOfTotal, setPctOfTotal] = useState(0);
 
-  useEffect(() => {
+  // useFocusEffect (not useEffect) so returning from the category edit screen shows the updated
+  // name/colour immediately.
+  useFocusEffect(useCallback(() => {
     (async () => {
       const cats = await listCategories();
       setCategory(cats.find(c => c.id === categoryId) ?? null);
@@ -31,14 +34,17 @@ export default function CategoryDrilldownScreen({ navigation, route }: Props) {
       const grand = breakdown.reduce((s, b) => s + b.total, 0);
       setPctOfTotal(grand > 0 ? Math.round((myTotal / grand) * 100) : 0);
     })();
-  }, [categoryId, mk]);
+  }, [categoryId, mk]));
 
   if (!category) return <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }} />;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }}>
-      <View style={{ paddingHorizontal: 20, paddingTop: 8 }}>
-        <Pressable onPress={() => navigation.goBack()}><Feather name="chevron-left" size={24} color={colors.neutral900} /></Pressable>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8 }}>
+        <Pressable onPress={() => navigation.goBack()} hitSlop={8}><Feather name="chevron-left" size={24} color={colors.neutral900} /></Pressable>
+        <Pressable onPress={() => navigation.navigate('AddEditCategory', { id: category.id })} hitSlop={8} accessibilityLabel="Edit category">
+          <Feather name="edit-2" size={19} color={colors.accent500} />
+        </Pressable>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 24, paddingTop: 8, paddingBottom: 16 }}>
         <View style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: category.color + '22', alignItems: 'center', justifyContent: 'center' }}>

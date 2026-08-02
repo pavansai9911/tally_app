@@ -128,6 +128,21 @@ into them. Never put SQL or persistence logic in a screen.
   budget must **update** it (see `getBudgetByCategory`), never insert a duplicate — duplicates
   double-count in reports.
 
+### Category rules
+- **Ordering** is `sort_order ASC`, but the default **"Other" is always pinned last** via a
+  `CASE WHEN default_key = 'other'` in the ORDER BY — it never moves, even with drag-drop. New
+  categories get `MIN(sort_order) - 1` so they appear at the top. `reorderCategories()` rewrites
+  `sort_order` for the dragged set (see `DraggableCategoryList`, a no-dependency PanResponder list).
+- **`default_key`** (added in migration v3) is a stable id for each seeded default, independent of
+  its name. Deleting a default records its key in the `deleted_default_keys` tombstone so a future
+  update's default-seeding never resurrects it.
+
+### Account views & transfers
+- Per-account screens use `listAccountTransactions()` / `getAccountBalance()` / `getAccountFlow()`,
+  which are **transfer-aware on both sides**: a transfer is OUT for `account_id`, IN for
+  `to_account_id`. The plain `account_id`-only filter (old AccountDetail) showed the wrong balance
+  for a received transfer — always include both sides.
+
 ---
 
 ## 6. Dates, time and currency
