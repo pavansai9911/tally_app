@@ -6,6 +6,16 @@ For the engineering view, see [../CHANGELOG.md](../CHANGELOG.md).
 
 ---
 
+## Version 1.3.1
+
+**Filter controls stay put**
+
+- Fixed: on Home, picking an account (or time period) with no activity made the balance
+  overview and its dropdowns disappear, so you couldn't switch back. The dropdowns now always
+  stay visible — an empty selection just shows ₹0.
+- Fixed the same thing in Reports: choosing a period with nothing in it no longer hides the
+  period selector.
+
 ## Version 1.3.0
 
 **Account filtering, category reordering, and a clean-slate reset**

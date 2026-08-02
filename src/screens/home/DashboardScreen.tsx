@@ -69,13 +69,20 @@ export default function DashboardScreen() {
     // Keep the account dropdown current (a new account should appear without an app restart).
     const accs = await listAccounts();
     setAccounts(accs.map(a => ({ id: a.id, name: a.name, icon: a.icon, color: a.color })));
-    await loadSummary(period, account);
+    // If the filtered account was deleted, fall back to All so the dashboard never gets stuck.
+    let acc = account;
+    if (acc && !accs.some(a => a.id === acc)) {
+      acc = null;
+      setAccount(null);
+      setSetting(DASHBOARD_ACCOUNT_KEY, 'all').catch(() => {});
+    }
+    await loadSummary(period, acc);
     // Balance + recents follow the selected account; budgets stay all-accounts.
-    setTotalBalance(account ? await getAccountBalance(account) : await getTotalBalance());
+    setTotalBalance(acc ? await getAccountBalance(acc) : await getTotalBalance());
     setBudgets((await listBudgetsWithSpend(monthKey())).slice(0, 2));
     setHabits(await getTodayHabitsWithStatus(todayKey()));
-    if (account) {
-      const rows = await listAccountTransactions(account, { limit: 5 });
+    if (acc) {
+      const rows = await listAccountTransactions(acc, { limit: 5 });
       setRecentTx(rows.map(t => ({
         id: t.id,
         title: t.type === 'transfer'
@@ -145,7 +152,11 @@ export default function DashboardScreen() {
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-  const isEmpty = recentTx.length === 0 && budgets.length === 0 && habits.length === 0;
+  // Show the Overview (period/account dropdowns + income/expense/net) whenever the user has any
+  // accounts — the controls must stay reachable even when the CURRENT (possibly account-filtered)
+  // view has no transactions. Gating this on "is the filtered view empty" made the dropdowns
+  // vanish after picking an account with no data, stranding the user.
+  const showOverview = accounts.length > 0;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.neutral50 }}>
@@ -176,13 +187,13 @@ export default function DashboardScreen() {
             <Text style={{ ...typography.caption, color: colors.neutral400, textTransform: 'uppercase' }}>Total balance</Text>
             <Feather name="chevron-right" size={16} color={colors.neutral400} />
           </View>
-          <Text style={{ fontSize: 28, fontWeight: '700', color: '#FFFFFF', marginTop: 6, marginBottom: isEmpty ? 0 : 14 }}>{formatCurrency(totalBalance)}</Text>
-          {!isEmpty && (
+          <Text style={{ fontSize: 28, fontWeight: '700', color: '#FFFFFF', marginTop: 6, marginBottom: showOverview ? 14 : 0 }}>{formatCurrency(totalBalance)}</Text>
+          {showOverview && (
             <>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                 <Text style={{ ...typography.caption, color: colors.neutral400, textTransform: 'uppercase' }}>Overview</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  {accounts.length > 0 && <AccountMenu accounts={accounts} value={account} onChange={onChangeAccount} variant="onDark" />}
+                  <AccountMenu accounts={accounts} value={account} onChange={onChangeAccount} variant="onDark" />
                   <PeriodMenu value={period} onChange={setPeriod} variant="onDark" />
                 </View>
               </View>

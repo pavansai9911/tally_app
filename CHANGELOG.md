@@ -10,6 +10,20 @@ from `package.json` — the single source of truth, from which `versionName` and
 
 ---
 
+## [1.3.1] — 2026-08-02
+
+### Fixed
+- **Home hero controls no longer disappear.** Selecting an account (or period) whose view had no
+  transactions made the whole Overview block — including the Account and period dropdowns — vanish,
+  leaving no way to change the filter back. The dropdowns now stay visible whenever you have any
+  accounts; the income/expense/net figures simply show ₹0 for an empty selection.
+- **Reports period control no longer disappears** for the same reason: picking a period with no
+  data used to replace the page (and its period dropdown) with an empty state. Reports now shows
+  the empty state only when there are no transactions at all; otherwise the period control stays
+  and an empty period shows zeros with a short "No expenses in this period" note.
+- **Deleted-account safety:** if the account currently selected on Home is deleted, the dashboard
+  falls back to “All accounts” instead of getting stuck on a missing account.
+
 ## [1.3.0] — 2026-08-02
 
 ### Added

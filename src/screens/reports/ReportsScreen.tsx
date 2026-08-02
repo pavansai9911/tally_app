@@ -37,6 +37,9 @@ export default function ReportsScreen({ navigation }: Props) {
   const [period, setPeriod] = useState<PeriodKey>('month');
 
   const [summary, setSummary] = useState({ income: 0, expense: 0, net: 0 });
+  // All-time flag, independent of the selected period, so the period control never disappears
+  // just because the CURRENT period has no data (which would strand the user on that period).
+  const [hasAnyMoney, setHasAnyMoney] = useState(false);
   const [breakdown, setBreakdown] = useState<Awaited<ReturnType<typeof getExpenseBreakdownByCategory>>>([]);
   const [trend, setTrend] = useState<{ income: number; expense: number }[]>([]);
   const [monthLabels, setMonthLabels] = useState<string[]>([]);
@@ -50,6 +53,8 @@ export default function ReportsScreen({ navigation }: Props) {
   const loadMoney = useCallback(async (p: PeriodKey) => {
     const mk = monthKey();
     const start = periodStartKey(p);
+    const allTime = await getRangeSummary(null);
+    setHasAnyMoney(allTime.income > 0 || allTime.expense > 0);
     setSummary(p === 'month' ? await getMonthSummary(mk) : await getRangeSummary(start));
     setBreakdown(p === 'month' ? await getExpenseBreakdownByCategory(mk) : await getExpenseBreakdownByRange(start));
     const keys = lastNMonthKeys(6);
@@ -99,7 +104,6 @@ export default function ReportsScreen({ navigation }: Props) {
 
   useFocusEffect(useCallback(() => { loadMoney(period); loadHabits(); }, [loadMoney, loadHabits, period]));
 
-  const hasMoneyData = summary.income > 0 || summary.expense > 0;
   const hasHabitsData = leaderboard.some(l => l.streak > 0) || habitStats.activeCount > 0;
 
   return (
@@ -112,7 +116,7 @@ export default function ReportsScreen({ navigation }: Props) {
       </View>
       <SwipeTabs labels={['Money', 'Habits']} index={tab === 'money' ? 0 : 1} onIndexChange={(i) => setTab(i === 0 ? 'money' : 'habits')}>
         {(
-        !hasMoneyData ? (
+        !hasAnyMoney ? (
           <EmptyState icon={<Feather name="bar-chart-2" size={40} color={colors.neutral400} />} title="Not enough data yet" description="Log a few transactions and reports will start showing trends, breakdowns, and insights" />
         ) : (
           <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
@@ -158,7 +162,9 @@ export default function ReportsScreen({ navigation }: Props) {
                   })}
                 </View>
               </View>
-            ) : null}
+            ) : (
+              <Text style={{ ...typography.bodySmall, color: colors.neutral400, marginBottom: 24 }}>No expenses in this period.</Text>
+            )}
 
             <Text style={{ ...typography.h2, color: colors.neutral900, marginBottom: 14 }}>Income vs Expense</Text>
             <GroupedBarChart
