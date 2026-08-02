@@ -32,11 +32,14 @@ import HabitDetailScreen from '@/screens/habits/HabitDetailScreen';
 // Reports
 import ReportsScreen from '@/screens/reports/ReportsScreen';
 import CategoryDrilldownScreen from '@/screens/reports/CategoryDrilldownScreen';
+import ExpenseCategoriesScreen from '@/screens/reports/ExpenseCategoriesScreen';
 import SingleHabitReportScreen from '@/screens/reports/SingleHabitReportScreen';
+import { PeriodKey } from '@/utils/period';
 
 // Settings
 import SettingsScreen from '@/screens/settings/SettingsScreen';
 import SettingsSubScreen from '@/screens/settings/SettingsSubScreen';
+import FeedbackScreen from '@/screens/settings/FeedbackScreen';
 
 export type MoneyStackParamList = {
   TransactionList: undefined;
@@ -62,7 +65,8 @@ export type HabitsStackParamList = {
 
 export type ReportsStackParamList = {
   Reports: undefined;
-  CategoryDrilldown: { categoryId: string; monthKey: string };
+  CategoryDrilldown: { categoryId: string; period: PeriodKey };
+  ExpenseCategories: { period: PeriodKey };
   SingleHabitReport: { habitId: string };
   // Also reachable here (edit a category from the expense-breakdown drilldown) so the user
   // stays in the Reports tab instead of being thrown over to Money.
@@ -73,6 +77,7 @@ export type RootStackParamList = {
   Tabs: undefined;
   Settings: undefined;
   SettingsSub: { section: string };
+  Feedback: undefined;
 };
 
 // Shared page-transition options: screens slide in from the right, modals from the bottom.
@@ -126,6 +131,7 @@ function ReportsNavigator() {
     <ReportsStack.Navigator screenOptions={stackScreenOptions}>
       <ReportsStack.Screen name="Reports" component={ReportsScreen} />
       <ReportsStack.Screen name="CategoryDrilldown" component={CategoryDrilldownScreen} />
+      <ReportsStack.Screen name="ExpenseCategories" component={ExpenseCategoriesScreen} />
       <ReportsStack.Screen name="SingleHabitReport" component={SingleHabitReportScreen} />
       {/* AddEditCategoryScreen is stack-agnostic (uses only route.params.id + goBack); the cast
           lets the Money-typed screen be reused here without duplicating it. */}
@@ -207,6 +213,7 @@ export function RootNavigator() {
       {/* Settings screens fade in rather than sliding — the horizontal slide felt heavy here. */}
       <RootStack.Screen name="Settings" component={SettingsScreen} options={{ animation: 'fade' }} />
       <RootStack.Screen name="SettingsSub" component={SettingsSubScreen} options={{ animation: 'fade' }} />
+      <RootStack.Screen name="Feedback" component={FeedbackScreen} options={{ animation: 'fade' }} />
     </RootStack.Navigator>
   );
 }

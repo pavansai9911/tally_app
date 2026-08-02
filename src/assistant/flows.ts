@@ -133,6 +133,18 @@ export const FLOWS: FlowDef[] = [
       { slot: 'name', prompt: 'Which habit should I remind you about?', suggestions: habitChips },
     ],
   },
+  {
+    // Handled specially in ruleEngine.finishFlow (no DB tool): the answers are drafted into an
+    // email that the chat UI opens in the user's mail app.
+    id: 'feedback',
+    tool: 'send_feedback',
+    intro: "Happy to pass that to the developer. A couple of quick questions, then I'll hand it to your email app to send.",
+    steps: [
+      { slot: 'q1', prompt: 'What were you trying to do?' },
+      { slot: 'q2', prompt: 'What did you expect, or what went wrong?' },
+      { slot: 'q3', prompt: 'Anything else? (or tap Skip)', suggestions: async () => [{ label: 'Skip' }], optional: true },
+    ],
+  },
 ];
 
 export function getFlow(id: string): FlowDef | undefined {

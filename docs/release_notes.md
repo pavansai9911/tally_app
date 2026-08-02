@@ -6,6 +6,25 @@ For the engineering view, see [../CHANGELOG.md](../CHANGELOG.md).
 
 ---
 
+## Version 1.4.0
+
+**Feedback, richer reports, and a little polish**
+
+- **Send us feedback, still 100% offline.** In Settings → About → *Send feedback*, jot a subject
+  and message and tap Send — your email app opens with everything filled in (including your app
+  and device details) so we can help. You always press Send yourself; nothing leaves your phone
+  on its own. The Tally Assistant can help you draft feedback too, especially when it can't answer
+  something.
+- **See every expense category.** The Reports breakdown now shows your top 4 plus a **Remaining**
+  line. Tap **Remaining**, or the **Total** in the middle of the ring, to see the full list of
+  categories with their percentages — then tap any one to see its transactions. Works for all time
+  ranges now, not just this month.
+- **Reports come to life.** The breakdown ring, the income-vs-expense bars and the balance line now
+  animate in each time you open Reports.
+- **Home & Money tidy-ups.** The balance card fits long account names cleanly; the Income/Expense
+  totals on the Money tab now follow your filters; and you can tap those Income/Expense cards to
+  quickly show just income or just expense.
+
 ## Version 1.3.1
 
 **Filter controls stay put**

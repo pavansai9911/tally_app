@@ -41,10 +41,10 @@ export function AccountMenu({
         onPress={() => setOpen(true)}
         accessibilityRole="button"
         accessibilityLabel={`Filter by account, currently ${label}`}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: bg, paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.md, maxWidth: 140 }}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: bg, paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.md, flexShrink: 1, minWidth: 0 }}
       >
         <Feather name="credit-card" size={12} color={fg} />
-        <Text numberOfLines={1} style={{ ...typography.caption, fontWeight: '600', color: fg, flexShrink: 1 }}>{label}</Text>
+        <Text numberOfLines={1} ellipsizeMode="tail" style={{ ...typography.caption, fontWeight: '600', color: fg, flexShrink: 1, minWidth: 0 }}>{label}</Text>
         <Feather name="chevron-down" size={13} color={fg} />
       </Pressable>
 

@@ -5,15 +5,16 @@ import { useFocusEffect } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { mapIcon } from '@/utils/iconMap';
-import { formatCurrency, formatDateTimeLabel } from '@/utils/format';
-import { listTransactions, listCategories, getExpenseBreakdownByCategory, TransactionWithDetails, Category } from '@/db';
+import { formatCurrency, formatDateTimeLabel, monthKey } from '@/utils/format';
+import { matchesPeriod, periodStartKey, periodLabel } from '@/utils/period';
+import { listTransactions, listCategories, getExpenseBreakdownByCategory, getExpenseBreakdownByRange, TransactionWithDetails, Category } from '@/db';
 import { ReportsStackParamList } from '@/navigation/RootNavigator';
 
 type Props = NativeStackScreenProps<ReportsStackParamList, 'CategoryDrilldown'>;
 
 export default function CategoryDrilldownScreen({ navigation, route }: Props) {
   const { colors, typography } = useTheme();
-  const { categoryId, monthKey: mk } = route.params;
+  const { categoryId, period } = route.params;
   const [category, setCategory] = useState<Category | null>(null);
   const [txs, setTxs] = useState<TransactionWithDetails[]>([]);
   const [total, setTotal] = useState(0);
@@ -26,15 +27,17 @@ export default function CategoryDrilldownScreen({ navigation, route }: Props) {
       const cats = await listCategories();
       setCategory(cats.find(c => c.id === categoryId) ?? null);
       const all = await listTransactions();
-      const filtered = all.filter(t => t.category_id === categoryId && t.occurred_at.startsWith(mk));
+      const filtered = all.filter(t => t.category_id === categoryId && matchesPeriod(t.occurred_at, period));
       setTxs(filtered);
       const myTotal = filtered.reduce((s, t) => s + t.amount, 0);
       setTotal(myTotal);
-      const breakdown = await getExpenseBreakdownByCategory(mk);
+      const breakdown = period === 'month'
+        ? await getExpenseBreakdownByCategory(monthKey())
+        : await getExpenseBreakdownByRange(periodStartKey(period));
       const grand = breakdown.reduce((s, b) => s + b.total, 0);
       setPctOfTotal(grand > 0 ? Math.round((myTotal / grand) * 100) : 0);
     })();
-  }, [categoryId, mk]));
+  }, [categoryId, period]));
 
   if (!category) return <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }} />;
 
@@ -61,7 +64,7 @@ export default function CategoryDrilldownScreen({ navigation, route }: Props) {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 24 }}>
-        <Text style={{ ...typography.caption, color: colors.neutral400, textTransform: 'uppercase', marginBottom: 10 }}>{txs.length} transactions</Text>
+        <Text style={{ ...typography.caption, color: colors.neutral400, textTransform: 'uppercase', marginBottom: 10 }}>{txs.length} transactions · {periodLabel(period)}</Text>
         {txs.map(t => (
           <View key={t.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: 0.5, borderBottomColor: colors.surfaceBorder }}>
             <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.neutral50, alignItems: 'center', justifyContent: 'center' }}>

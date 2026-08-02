@@ -10,6 +10,36 @@ from `package.json` — the single source of truth, from which `versionName` and
 
 ---
 
+## [1.4.0] — 2026-08-03
+
+### Added
+- **Send feedback (offline).** New Settings → About → *Send feedback* form (subject + message)
+  that opens your mail app with everything pre-drafted — your message plus app version, Android
+  version, device model and timestamp — addressed to the developer. Nothing is sent automatically;
+  you review and press Send. Uses a `mailto:` intent, so it stays fully offline (no network from
+  the app). If no mail app exists, a themed dialog shows the address.
+- **Feedback via the Tally Assistant.** When the assistant can't answer, or when you ask
+  ("send feedback", "report a bug", "contact developer"…), it collects three quick answers and
+  hands the drafted email to your mail app the same way.
+- **Reports → full expense breakdown.** The donut legend now shows the top 4 categories plus a
+  **Remaining** line (when there are more than 4). Tapping **Remaining** — or the **Total** in the
+  donut's centre — opens a new screen listing **every** expense category (highest→lowest) with a
+  percentage bar; tapping a category opens its transactions. Drill-downs now work for every period
+  (This month / 3M / 6M / All time), not just the current month.
+- **Report chart animations.** The Expense-breakdown donut draws in clockwise, the Income-vs-Expense
+  bars grow up, and the Balance-trend line draws left-to-right — replayed each time you open the
+  Reports tab or change the period.
+
+### Changed
+- **Home hero:** removed the "Overview" label; the account and period dropdowns are left-aligned,
+  and a long account name now ellipsizes so the period pill never overflows the card (pure flexbox,
+  adapts to any screen/font size).
+- **Money filter summary:** the Income/Expense cards now reflect the current category/month filter
+  scope instead of a fixed "this month" total.
+- **Money Income/Expense cards are now tap-to-filter:** tap Income to show only income, tap Expense
+  for only expense, tap the active one again to reset. The active card is highlighted (mirrors the
+  account screen's IN/OUT behaviour).
+
 ## [1.3.1] — 2026-08-02
 
 ### Fixed

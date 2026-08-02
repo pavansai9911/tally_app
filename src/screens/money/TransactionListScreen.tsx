@@ -6,8 +6,8 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { EmptyState } from '@/components/ui';
 import { mapIcon } from '@/utils/iconMap';
-import { formatCurrency, formatDateLabel, formatStoredTime, monthKey, shortMonthFromKey } from '@/utils/format';
-import { listTransactions, getMonthSummary, listCategories, TransactionWithDetails, Category } from '@/db';
+import { formatCurrency, formatDateLabel, formatStoredTime, shortMonthFromKey } from '@/utils/format';
+import { listTransactions, listCategories, TransactionWithDetails, Category } from '@/db';
 import { MoneyStackParamList } from '@/navigation/RootNavigator';
 
 type Props = NativeStackScreenProps<MoneyStackParamList, 'TransactionList'>;
@@ -17,7 +17,6 @@ export default function TransactionListScreen({ navigation }: Props) {
   const { colors, typography, radius } = useTheme();
   const [transactions, setTransactions] = useState<TransactionWithDetails[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [summary, setSummary] = useState({ income: 0, expense: 0, net: 0 });
 
   // Filters (applied client-side over the already-loaded list; no extra DB work).
   const [filterOpen, setFilterOpen] = useState(false);
@@ -29,7 +28,6 @@ export default function TransactionListScreen({ navigation }: Props) {
     const tx = await listTransactions();
     setTransactions(tx);
     setCategories(await listCategories());
-    setSummary(await getMonthSummary(monthKey()));
   }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -40,16 +38,40 @@ export default function TransactionListScreen({ navigation }: Props) {
     return Array.from(set).sort().reverse();
   }, [transactions]);
 
-  const activeCount = (fType !== 'all' ? 1 : 0) + (fCategory ? 1 : 0) + (fMonth ? 1 : 0);
+  // income/expense are shown/toggled on the cards, so only transfer/category/month count toward
+  // the advanced-filter badge + chip row (income/expense are indicated by the card highlight).
+  const activeCount = (fType === 'transfer' ? 1 : 0) + (fCategory ? 1 : 0) + (fMonth ? 1 : 0);
 
-  const filtered = useMemo(
+  // Scope = category + month filters only (NOT the income/expense toggle). The Income/Expense
+  // cards show totals for this scope and stay visible as toggles; the type toggle narrows the
+  // LIST and highlights the tapped card — mirroring the account screen's IN/OUT behaviour.
+  const scoped = useMemo(
     () => transactions.filter(t =>
-      (fType === 'all' || t.type === fType) &&
       (!fCategory || t.category_id === fCategory) &&
       (!fMonth || t.occurred_at.startsWith(fMonth))
     ),
-    [transactions, fType, fCategory, fMonth],
+    [transactions, fCategory, fMonth],
   );
+
+  const filtered = useMemo(
+    () => scoped.filter(t => fType === 'all' || t.type === fType),
+    [scoped, fType],
+  );
+
+  // Card values reflect the category/month scope (issue: filtered summary), independent of the
+  // income/expense toggle, so both cards always show their total and stay tappable.
+  const summary = useMemo(() => {
+    let income = 0;
+    let expense = 0;
+    for (const t of scoped) {
+      if (t.type === 'income') income += t.amount;
+      else if (t.type === 'expense') expense += t.amount;
+    }
+    return { income, expense };
+  }, [scoped]);
+
+  // Tap a card to show only that type; tap the active one again to reset to All.
+  const toggleType = (t: 'income' | 'expense') => setFType(prev => (prev === t ? 'all' : t));
 
   function clearFilters() { setFType('all'); setFCategory(null); setFMonth(null); }
 
@@ -86,7 +108,7 @@ export default function TransactionListScreen({ navigation }: Props) {
 
       {activeCount > 0 && (
         <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, paddingHorizontal: 24, paddingBottom: 12 }}>
-          {fType !== 'all' && <FilterChip label={fType[0].toUpperCase() + fType.slice(1)} onClear={() => setFType('all')} colors={colors} typography={typography} />}
+          {fType === 'transfer' && <FilterChip label="Transfer" onClear={() => setFType('all')} colors={colors} typography={typography} />}
           {fMonth && <FilterChip label={`${shortMonthFromKey(fMonth)} ${fMonth.slice(0, 4)}`} onClear={() => setFMonth(null)} colors={colors} typography={typography} />}
           {filterCategoryName && <FilterChip label={filterCategoryName} onClear={() => setFCategory(null)} colors={colors} typography={typography} />}
           <Pressable onPress={clearFilters} hitSlop={6}>
@@ -96,15 +118,27 @@ export default function TransactionListScreen({ navigation }: Props) {
       )}
 
       {transactions.length > 0 && (
+        // Income / Expense cards double as a quick type filter: tap to show only that type, tap
+        // the active one again to reset. A border highlights the active card (no extra icon).
         <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 24, paddingBottom: 12 }}>
-          <View style={{ flex: 1, padding: 12, backgroundColor: colors.incomeTint, borderRadius: radius.lg }}>
+          <Pressable
+            onPress={() => toggleType('income')}
+            accessibilityRole="button"
+            accessibilityState={{ selected: fType === 'income' }}
+            style={{ flex: 1, padding: 12, backgroundColor: colors.incomeTint, borderRadius: radius.lg, borderWidth: 1.5, borderColor: fType === 'income' ? colors.income : 'transparent' }}
+          >
             <Text style={{ ...typography.caption, color: colors.income, textTransform: 'uppercase' }}>Income</Text>
             <Text style={{ ...typography.amountMedium, color: colors.neutral900, marginTop: 4 }}>{formatCurrency(summary.income)}</Text>
-          </View>
-          <View style={{ flex: 1, padding: 12, backgroundColor: colors.expenseTint, borderRadius: radius.lg }}>
+          </Pressable>
+          <Pressable
+            onPress={() => toggleType('expense')}
+            accessibilityRole="button"
+            accessibilityState={{ selected: fType === 'expense' }}
+            style={{ flex: 1, padding: 12, backgroundColor: colors.expenseTint, borderRadius: radius.lg, borderWidth: 1.5, borderColor: fType === 'expense' ? colors.expense : 'transparent' }}
+          >
             <Text style={{ ...typography.caption, color: colors.expense, textTransform: 'uppercase' }}>Expense</Text>
             <Text style={{ ...typography.amountMedium, color: colors.neutral900, marginTop: 4 }}>{formatCurrency(summary.expense)}</Text>
-          </View>
+          </Pressable>
         </View>
       )}
 

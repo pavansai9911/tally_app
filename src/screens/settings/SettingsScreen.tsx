@@ -147,6 +147,7 @@ export default function SettingsScreen({ navigation }: Props) {
 
         <SectionLabel title="About" />
         <Card>
+          <Row label="Send feedback" value="" onPress={() => navigation.navigate('Feedback')} />
           <Row label="Version" value={APP_VERSION} onPress={() => {}} />
           <Row label="Privacy" value="" onPress={() => navigation.navigate('SettingsSub', { section: 'privacy' })} last />
         </Card>

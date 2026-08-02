@@ -35,6 +35,9 @@ export default function ReportsScreen({ navigation }: Props) {
   const { colors, typography, radius } = useTheme();
   const [tab, setTab] = useState<'money' | 'habits'>('money');
   const [period, setPeriod] = useState<PeriodKey>('month');
+  // Bumped on focus + period change; passed to the charts so they replay their draw-in animation
+  // every time the Reports tab is opened or the period changes.
+  const [chartAnim, setChartAnim] = useState(0);
 
   const [summary, setSummary] = useState({ income: 0, expense: 0, net: 0 });
   // All-time flag, independent of the selected period, so the period control never disappears
@@ -102,9 +105,17 @@ export default function ReportsScreen({ navigation }: Props) {
     }
   }, []);
 
-  useFocusEffect(useCallback(() => { loadMoney(period); loadHabits(); }, [loadMoney, loadHabits, period]));
+  useFocusEffect(useCallback(() => { loadMoney(period); loadHabits(); setChartAnim(n => n + 1); }, [loadMoney, loadHabits, period]));
 
   const hasHabitsData = leaderboard.some(l => l.streak > 0) || habitStats.activeCount > 0;
+
+  // Legend shows the top 4 categories; a "Remaining" line rolls up the rest (only when there
+  // ARE more than 4). Both "Remaining" and the donut centre open the full all-categories screen.
+  const breakdownTotal = breakdown.reduce((s, b) => s + b.total, 0);
+  const topCategories = breakdown.slice(0, 4);
+  const remainingTotal = breakdown.slice(4).reduce((s, b) => s + b.total, 0);
+  const pct = (v: number) => (breakdownTotal > 0 ? Math.round((v / breakdownTotal) * 100) : 0);
+  const openAllCategories = () => navigation.navigate('ExpenseCategories', { period });
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }}>
@@ -137,29 +148,46 @@ export default function ReportsScreen({ navigation }: Props) {
             <Text style={{ ...typography.h2, color: colors.neutral900, marginBottom: 14 }}>Expense breakdown</Text>
             {breakdown.length > 0 ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 20, marginBottom: 24 }}>
-                <DonutChart
-                  data={breakdown.map(b => ({ value: b.total, color: b.category_color }))}
-                  centerLabel="Total"
-                  centerValue={formatCurrency(breakdown.reduce((s, b) => s + b.total, 0))}
-                  onSlicePress={(i) => {
-                    // The drill-down is a per-month view, so it only applies to the month period.
-                    const b = breakdown[i];
-                    if (b && period === 'month') navigation.navigate('CategoryDrilldown', { categoryId: b.category_id, monthKey: monthKey() });
-                  }}
-                />
+                <View style={{ width: 140, height: 140 }}>
+                  <DonutChart
+                    data={breakdown.map(b => ({ value: b.total, color: b.category_color }))}
+                    centerLabel="Total"
+                    centerValue={formatCurrency(breakdownTotal)}
+                    animateTrigger={chartAnim}
+                    onSlicePress={(i) => {
+                      const b = breakdown[i];
+                      if (b) navigation.navigate('CategoryDrilldown', { categoryId: b.category_id, period });
+                    }}
+                  />
+                  {/* Tapping the centre "Total" opens the full all-categories screen. Sits only
+                      over the donut hole, so it never blocks the coloured slices around it. */}
+                  <Pressable
+                    onPress={openAllCategories}
+                    accessibilityRole="button"
+                    accessibilityLabel="See all expense categories"
+                    style={{ position: 'absolute', top: 42, left: 42, width: 56, height: 56, borderRadius: 28 }}
+                  />
+                </View>
                 <View style={{ flex: 1, gap: 9 }}>
-                  {breakdown.slice(0, 4).map(b => {
-                    const total = breakdown.reduce((s, x) => s + x.total, 0);
-                    return (
-                      <Pressable key={b.category_id} onPress={() => { if (period === 'month') navigation.navigate('CategoryDrilldown', { categoryId: b.category_id, monthKey: monthKey() }); }} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
-                          <View style={{ width: 9, height: 9, borderRadius: 3, backgroundColor: b.category_color }} />
-                          <Text style={{ ...typography.bodySmall, color: colors.neutral900 }}>{b.category_name}</Text>
-                        </View>
-                        <Text style={{ ...typography.caption, color: colors.neutral500, fontWeight: '600' }}>{Math.round((b.total / total) * 100)}%</Text>
-                      </Pressable>
-                    );
-                  })}
+                  {topCategories.map(b => (
+                    <Pressable key={b.category_id} onPress={() => navigation.navigate('CategoryDrilldown', { categoryId: b.category_id, period })} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+                        <View style={{ width: 9, height: 9, borderRadius: 3, backgroundColor: b.category_color }} />
+                        <Text style={{ ...typography.bodySmall, color: colors.neutral900 }} numberOfLines={1}>{b.category_name}</Text>
+                      </View>
+                      <Text style={{ ...typography.caption, color: colors.neutral500, fontWeight: '600' }}>{pct(b.total)}%</Text>
+                    </Pressable>
+                  ))}
+                  {breakdown.length > 4 && (
+                    <Pressable onPress={openAllCategories} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+                        <View style={{ width: 9, height: 9, borderRadius: 3, backgroundColor: colors.neutral400 }} />
+                        <Text style={{ ...typography.bodySmall, color: colors.accent500, fontWeight: '600' }}>Remaining</Text>
+                        <Feather name="chevron-right" size={13} color={colors.accent500} />
+                      </View>
+                      <Text style={{ ...typography.caption, color: colors.neutral500, fontWeight: '600' }}>{pct(remainingTotal)}%</Text>
+                    </Pressable>
+                  )}
                 </View>
               </View>
             ) : (
@@ -171,6 +199,7 @@ export default function ReportsScreen({ navigation }: Props) {
               data={monthLabels.map((label, i) => ({ label, a: trend[i]?.income ?? 0, b: trend[i]?.expense ?? 0 }))}
               barColorA={colors.income}
               barColorB={colors.expense}
+              animateTrigger={chartAnim}
             />
             <View style={{ flexDirection: 'row', gap: 18, marginTop: 8, marginBottom: 24 }}>
               <LegendDot color={colors.income} label="Income" />
@@ -178,7 +207,7 @@ export default function ReportsScreen({ navigation }: Props) {
             </View>
 
             <Text style={{ ...typography.h2, color: colors.neutral900, marginBottom: 6 }}>Balance trend</Text>
-            <TrendLineChart points={balanceSeries} color={colors.accent500} fillColor={colors.accentTint} />
+            <TrendLineChart points={balanceSeries} color={colors.accent500} fillColor={colors.accentTint} animateTrigger={chartAnim} />
             </FadeInView>
           </ScrollView>
         )

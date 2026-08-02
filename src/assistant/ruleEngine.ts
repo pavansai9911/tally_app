@@ -11,7 +11,10 @@
 // tool registry as function definitions. The UI is untouched.
 
 import { AssistantEngine, AssistantReply, Suggestion } from './types';
-import { INTENTS, STARTER_SUGGESTIONS, FALLBACK_SUGGESTIONS, SUCCESS_SUGGESTIONS } from './intents';
+import {
+  INTENTS, STARTER_SUGGESTIONS, FALLBACK_SUGGESTIONS, SUCCESS_SUGGESTIONS,
+  FEEDBACK_SUGGESTION, CLOSE_SUGGESTION,
+} from './intents';
 import { FLOWS, FlowDef, getFlow, promptFor } from './flows';
 import { getTool } from './actions';
 import {
@@ -67,11 +70,11 @@ export class RuleAssistantEngine implements AssistantEngine {
     const match = matchIntent(text);
     if (match) return this.runIntent(match.intent.id, text);
 
-    // 5. Fallback.
+    // 5. Fallback. Offer to pass anything we can't handle to the developer as feedback.
     return {
       messages: [
         "I'm not sure I follow yet.",
-        'Try things like "I spent 500 on food", "monthly summary", or "add habit".',
+        'Try things like "I spent 500 on food", "monthly summary", or "add habit". If something looks wrong or you have an idea, tap “Send feedback” and I\'ll help you tell the developer.',
       ],
       suggestions: FALLBACK_SUGGESTIONS,
     };
@@ -198,6 +201,32 @@ export class RuleAssistantEngine implements AssistantEngine {
     const state = this.active!;
     const { flow, slots } = state;
     this.reset();
+
+    // Feedback flow: draft an email from the answers and let the chat UI open the mail app.
+    if (flow.tool === 'send_feedback') {
+      const q1 = (slots.q1 ?? '').trim();
+      const q2 = (slots.q2 ?? '').trim();
+      const q3 = (slots.q3 ?? '').trim();
+      const body = [
+        'Q: What were you trying to do?',
+        `A: ${q1 || '(not answered)'}`,
+        '',
+        'Q: What did you expect, or what went wrong?',
+        `A: ${q2 || '(not answered)'}`,
+        '',
+        'Q: Anything else?',
+        `A: ${q3 || '(none)'}`,
+      ].join('\n');
+      const subject = q1 ? (q1.length > 60 ? `${q1.slice(0, 57)}…` : q1) : 'Feedback via assistant';
+      return {
+        messages: [
+          ...preamble,
+          'Thanks! I\'ve drafted your feedback. Tap “Send email” to open your mail app, review it and hit send — nothing leaves your phone until you do.',
+        ],
+        feedback: { subject, body },
+        suggestions: [FEEDBACK_SUGGESTION, CLOSE_SUGGESTION],
+      };
+    }
 
     // The reminder flow is guidance-only (reminders are configured on the habit itself).
     if (flow.tool === 'noop_reminder') {

@@ -190,12 +190,12 @@ export default function DashboardScreen() {
           <Text style={{ fontSize: 28, fontWeight: '700', color: '#FFFFFF', marginTop: 6, marginBottom: showOverview ? 14 : 0 }}>{formatCurrency(totalBalance)}</Text>
           {showOverview && (
             <>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <Text style={{ ...typography.caption, color: colors.neutral400, textTransform: 'uppercase' }}>Overview</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <AccountMenu accounts={accounts} value={account} onChange={onChangeAccount} variant="onDark" />
-                  <PeriodMenu value={period} onChange={setPeriod} variant="onDark" />
-                </View>
+              {/* No "Overview" label (removed per BA). The account pill flex-shrinks and
+                  ellipsizes a long name so the period pill never overflows the hero — all via
+                  flexbox, so it adapts to any screen width / font scale with no hardcoded sizes. */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <AccountMenu accounts={accounts} value={account} onChange={onChangeAccount} variant="onDark" />
+                <PeriodMenu value={period} onChange={setPeriod} variant="onDark" />
               </View>
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <MiniStat label="Income" value={formatCurrency(summary.income)} icon="arrow-down-left" bg="#13301F" fg={colors.income} />

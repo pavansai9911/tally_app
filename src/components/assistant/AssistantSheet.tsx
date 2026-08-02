@@ -9,7 +9,8 @@ import { haptic } from '@/utils/haptics';
 import { AssistantAvatar, AssistantAvatarWithStatus } from './AssistantAvatar';
 import { TypingDots } from './TypingDots';
 import { createAssistantEngine, AssistantReply, ChatMessage, Suggestion } from '@/assistant';
-import { CLOSE_ACTION } from '@/assistant/intents';
+import { CLOSE_ACTION, FEEDBACK_ACTION, CLOSE_SUGGESTION } from '@/assistant/intents';
+import { openFeedbackEmail, FEEDBACK_EMAIL } from '@/services/feedback';
 
 let seq = 0;
 const nextId = () => `m${Date.now()}_${seq++}`;
@@ -122,6 +123,8 @@ export function AssistantSheet({
   const scrollRef = useRef<ScrollView>(null);
   // Guards the window between sending and the reply starting, where `pending` is still false.
   const busyRef = useRef(false);
+  // Latest feedback draft carried on a reply; the "Send email" chip opens it in the mail app.
+  const feedbackRef = useRef<{ subject: string; body: string } | null>(null);
   const slide = useRef(new Animated.Value(0)).current;
 
   // Sheet enter / exit
@@ -137,6 +140,8 @@ export function AssistantSheet({
   const pushReply = useCallback(async (reply: AssistantReply) => {
     setSuggestions([]);
     setNav(null);
+    // Remember (or clear) the drafted feedback email this reply carries.
+    feedbackRef.current = reply.feedback ?? null;
     // Bubbles arrive one at a time with a short "thinking" pause between them.
     for (let i = 0; i < reply.messages.length; i++) {
       setPending(true);
@@ -183,6 +188,20 @@ export function AssistantSheet({
       // Reserved UI action: dismiss the assistant rather than asking the engine.
       if (text === CLOSE_ACTION) {
         onClose();
+        return;
+      }
+      // Reserved UI action: open the drafted feedback email in the user's mail app.
+      if (text === FEEDBACK_ACTION) {
+        const draft = feedbackRef.current;
+        if (draft) {
+          const ok = await openFeedbackEmail(draft.subject, draft.body);
+          if (!ok) {
+            await pushReply({
+              messages: [`I couldn't find an email app on this phone. You can email your feedback to ${FEEDBACK_EMAIL} directly.`],
+              suggestions: [CLOSE_SUGGESTION],
+            });
+          }
+        }
         return;
       }
       if (!text || busyRef.current) return;
