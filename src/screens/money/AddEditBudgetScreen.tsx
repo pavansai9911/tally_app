@@ -5,6 +5,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Button, Input, SegmentOption, ToggleSwitch } from '@/components/ui';
 import { useConfirm } from '@/components/ConfirmDialog';
+import { haptic } from '@/utils/haptics';
 import { mapIcon } from '@/utils/iconMap';
 import { createBudget, updateBudget, deleteBudget, listCategories, listBudgetsWithSpend, Category } from '@/db';
 import { monthKey } from '@/utils/format';
@@ -22,6 +23,7 @@ export default function AddEditBudgetScreen({ navigation, route }: Props) {
   const [limit, setLimit] = useState('');
   const [recurrence, setRecurrence] = useState<'monthly' | 'one_time'>('monthly');
   const [alertEnabled, setAlertEnabled] = useState(true);
+  const [limitError, setLimitError] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -42,7 +44,11 @@ export default function AddEditBudgetScreen({ navigation, route }: Props) {
   }, [editId]);
 
   async function handleSave() {
-    if (!categoryId || !parseFloat(limit)) return;
+    if (!categoryId || !parseFloat(limit)) {
+      setLimitError(!parseFloat(limit));
+      haptic('notificationWarning');
+      return;
+    }
     const payload = { category_id: categoryId, monthly_limit: parseFloat(limit), recurrence, alert_near_limit: alertEnabled ? 1 : 0, alert_threshold_pct: 90 };
     if (editId) await updateBudget(editId, payload);
     else await createBudget(payload);
@@ -89,7 +95,13 @@ export default function AddEditBudgetScreen({ navigation, route }: Props) {
           </View>
         )}
 
-        <Input label="Monthly limit" value={limit} onChangeText={t => setLimit(t.replace(/[^0-9.]/g, ''))} keyboardType="numeric" placeholder="10000" focused />
+        <Input label="Monthly limit" value={limit} onChangeText={(t) => { setLimit(t.replace(/[^0-9.]/g, '')); if (limitError) setLimitError(false); }} keyboardType="numeric" placeholder="10000" focused={!limitError} error={limitError} />
+        {limitError && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -12, marginBottom: 14 }}>
+            <Feather name="alert-circle" size={13} color={colors.expense} />
+            <Text style={{ ...typography.bodySmallMedium, color: colors.expense }}>Enter a limit greater than zero</Text>
+          </View>
+        )}
 
         <Text style={{ ...typography.caption, color: colors.neutral600, textTransform: 'uppercase', marginBottom: 10 }}>Repeats</Text>
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 24 }}>

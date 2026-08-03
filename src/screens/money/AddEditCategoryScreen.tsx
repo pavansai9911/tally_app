@@ -5,6 +5,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Button, Input } from '@/components/ui';
 import { useConfirm } from '@/components/ConfirmDialog';
+import { haptic } from '@/utils/haptics';
 import { mapIcon, CATEGORY_ICON_OPTIONS, CATEGORY_COLOR_OPTIONS } from '@/utils/iconMap';
 import { createCategory, updateCategory, deleteCategory, listCategories, countTransactionsForCategory, Category } from '@/db';
 import { MoneyStackParamList } from '@/navigation/RootNavigator';
@@ -20,6 +21,7 @@ export default function AddEditCategoryScreen({ navigation, route }: Props) {
   const [icon, setIcon] = useState(CATEGORY_ICON_OPTIONS[0]);
   const [color, setColor] = useState(CATEGORY_COLOR_OPTIONS[0]);
   const [type, setType] = useState<'expense' | 'income'>('expense');
+  const [nameError, setNameError] = useState(false);
 
   useEffect(() => {
     if (editId) {
@@ -37,7 +39,11 @@ export default function AddEditCategoryScreen({ navigation, route }: Props) {
   }, [editId]);
 
   async function handleSave() {
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      setNameError(true);
+      haptic('notificationWarning');
+      return;
+    }
     if (editId) await updateCategory(editId, { name, icon, color });
     else await createCategory({ name, icon, color, type });
     navigation.goBack();
@@ -71,7 +77,13 @@ export default function AddEditCategoryScreen({ navigation, route }: Props) {
           </View>
         </View>
 
-        <Input label="Category name" value={name} onChangeText={setName} focused />
+        <Input label="Category name" value={name} onChangeText={(t) => { setName(t); if (nameError) setNameError(false); }} focused={!nameError} error={nameError} />
+        {nameError && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -12, marginBottom: 14 }}>
+            <Feather name="alert-circle" size={13} color={colors.expense} />
+            <Text style={{ ...typography.bodySmallMedium, color: colors.expense }}>Enter a category name</Text>
+          </View>
+        )}
 
         {!editId && (
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 22 }}>

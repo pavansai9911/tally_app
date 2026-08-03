@@ -31,6 +31,8 @@ export default function AddEditRecurringScreen({ navigation, route }: Props) {
   const [autoAdd, setAutoAdd] = useState(true);
   const [accounts, setAccounts] = useState<AccountWithBalance[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [nameError, setNameError] = useState(false);
+  const [amountError, setAmountError] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -58,7 +60,14 @@ export default function AddEditRecurringScreen({ navigation, route }: Props) {
   }, [editId]);
 
   async function handleSave() {
-    if (!name.trim() || !parseFloat(amount) || !accountId) return;
+    const nameBad = !name.trim();
+    const amountBad = !parseFloat(amount);
+    if (nameBad || amountBad || !accountId) {
+      setNameError(nameBad);
+      setAmountError(amountBad);
+      haptic('notificationWarning');
+      return;
+    }
     const payload = {
       type, name, amount: parseFloat(amount), category_id: categoryId, account_id: accountId,
       frequency, next_date: nextDate, auto_add: autoAdd ? 1 : 0,
@@ -94,8 +103,20 @@ export default function AddEditRecurringScreen({ navigation, route }: Props) {
           <SegmentOption label="Income" selected={type === 'income'} onPress={() => setType('income')} selectedBg={colors.incomeTint} selectedFg={colors.income} />
         </View>
 
-        <Input label="Name" value={name} onChangeText={setName} placeholder="e.g. Netflix" focused />
-        <Input label="Amount" value={amount} onChangeText={t => setAmount(t.replace(/[^0-9.]/g, ''))} keyboardType="numeric" placeholder="649" />
+        <Input label="Name" value={name} onChangeText={(t) => { setName(t); if (nameError) setNameError(false); }} placeholder="e.g. Netflix" focused={!nameError} error={nameError} />
+        {nameError && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -12, marginBottom: 14 }}>
+            <Feather name="alert-circle" size={13} color={colors.expense} />
+            <Text style={{ ...typography.bodySmallMedium, color: colors.expense }}>Enter a name</Text>
+          </View>
+        )}
+        <Input label="Amount" value={amount} onChangeText={(t) => { setAmount(t.replace(/[^0-9.]/g, '')); if (amountError) setAmountError(false); }} keyboardType="numeric" placeholder="649" error={amountError} />
+        {amountError && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -12, marginBottom: 14 }}>
+            <Feather name="alert-circle" size={13} color={colors.expense} />
+            <Text style={{ ...typography.bodySmallMedium, color: colors.expense }}>Enter an amount greater than zero</Text>
+          </View>
+        )}
 
         <Text style={{ ...typography.caption, color: colors.neutral600, textTransform: 'uppercase', marginBottom: 10 }}>Frequency</Text>
         <View style={{ flexDirection: 'row', gap: 8, marginBottom: 18 }}>

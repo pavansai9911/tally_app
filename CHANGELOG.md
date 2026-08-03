@@ -10,6 +10,23 @@ from `package.json` — the single source of truth, from which `versionName` and
 
 ---
 
+## [1.4.1] — 2026-08-03
+
+### Fixed
+- **Form validation feedback.** Tapping Save/Create with a required field empty now turns that
+  field's border **red** with a short inline message (instead of silently doing nothing). Applied
+  across all forms: **habit name**, **account name**, **category name**, **recurring name +
+  amount**, and **budget limit** (transactions already had this).
+- **Tally Assistant message pacing.** When a reply has multiple bubbles, the next bubble now waits
+  for the previous one to finish typing before it appears (it used to overlap mid-typewriter). The
+  suggestion chips also wait for the last bubble. A reply interrupted by closing the assistant no
+  longer leaks bubbles into the next conversation.
+
+### Changed
+- **Smoother Reports chart animations.** The Expense-breakdown donut, the Income-vs-Expense bars
+  and the Balance-trend line are now driven by animated SVG props instead of per-frame React
+  re-renders, so the draw-in is noticeably smoother (no stutter when all three animate at once).
+
 ## [1.4.0] — 2026-08-03
 
 ### Added

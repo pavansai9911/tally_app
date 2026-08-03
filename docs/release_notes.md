@@ -6,6 +6,16 @@ For the engineering view, see [../CHANGELOG.md](../CHANGELOG.md).
 
 ---
 
+## Version 1.4.1
+
+**Small polish**
+
+- Forms now clearly flag a missing required field — the box turns red with a short hint — instead
+  of nothing happening when you tap Save.
+- The Tally Assistant shows its messages one at a time, waiting for each to finish before the next
+  appears.
+- The charts on the Reports tab animate in more smoothly.
+
 ## Version 1.4.0
 
 **Feedback, richer reports, and a little polish**

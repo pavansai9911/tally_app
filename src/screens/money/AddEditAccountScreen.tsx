@@ -5,6 +5,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useTheme } from '@/theme/ThemeProvider';
 import { Button, Input, ToggleSwitch } from '@/components/ui';
 import { SuccessOverlay } from '@/components/SuccessOverlay';
+import { haptic } from '@/utils/haptics';
 import { createAccount, updateAccount, getAccount } from '@/db';
 import { MoneyStackParamList } from '@/navigation/RootNavigator';
 
@@ -26,6 +27,7 @@ export default function AddEditAccountScreen({ navigation, route }: Props) {
   const [balance, setBalance] = useState('0');
   const [includeInTotal, setIncludeInTotal] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [nameError, setNameError] = useState(false);
 
   useEffect(() => {
     if (editId) {
@@ -41,7 +43,11 @@ export default function AddEditAccountScreen({ navigation, route }: Props) {
   }, [editId]);
 
   async function handleSave() {
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      setNameError(true);
+      haptic('notificationWarning');
+      return;
+    }
     const payload = {
       name, type,
       icon: type === 'cash' ? 'ti-cash' : type === 'bank' ? 'ti-building-bank' : type === 'card' ? 'ti-credit-card' : 'ti-wallet',
@@ -67,7 +73,13 @@ export default function AddEditAccountScreen({ navigation, route }: Props) {
         <Pressable onPress={handleSave}><Text style={{ ...typography.bodyMedium, fontWeight: '600', color: colors.accent500 }}>Save</Text></Pressable>
       </View>
       <ScrollView contentContainerStyle={{ paddingHorizontal: 24 }}>
-        <Input label="Account name" value={name} onChangeText={setName} focused placeholder="e.g. ICICI Savings" />
+        <Input label="Account name" value={name} onChangeText={(t) => { setName(t); if (nameError) setNameError(false); }} focused={!nameError} error={nameError} placeholder="e.g. ICICI Savings" />
+        {nameError && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -12, marginBottom: 14 }}>
+            <Feather name="alert-circle" size={13} color={colors.expense} />
+            <Text style={{ ...typography.bodySmallMedium, color: colors.expense }}>Enter an account name</Text>
+          </View>
+        )}
 
         <Text style={{ ...typography.caption, color: colors.neutral600, textTransform: 'uppercase', marginBottom: 10 }}>Account type</Text>
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
