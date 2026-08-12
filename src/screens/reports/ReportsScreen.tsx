@@ -7,6 +7,8 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { EmptyState } from '@/components/ui';
 import { SwipeTabs } from '@/components/SwipeTabs';
 import { PeriodMenu } from '@/components/PeriodMenu';
+// FadeInView is still used in the Habits tab; it was removed only from the Money chart sections
+// (Expense Breakdown, Income vs Expense, Balance Trend) per the v1.4.2 entrance-animation fix.
 import { FadeInView } from '@/components/SuccessOverlay';
 import { DonutChart, GroupedBarChart, TrendLineChart, Heatmap } from '@/components/charts';
 import { mapIcon } from '@/utils/iconMap';
@@ -35,9 +37,6 @@ export default function ReportsScreen({ navigation }: Props) {
   const { colors, typography, radius } = useTheme();
   const [tab, setTab] = useState<'money' | 'habits'>('money');
   const [period, setPeriod] = useState<PeriodKey>('month');
-  // Bumped on focus + period change; passed to the charts so they replay their draw-in animation
-  // every time the Reports tab is opened or the period changes.
-  const [chartAnim, setChartAnim] = useState(0);
 
   const [summary, setSummary] = useState({ income: 0, expense: 0, net: 0 });
   // All-time flag, independent of the selected period, so the period control never disappears
@@ -105,7 +104,7 @@ export default function ReportsScreen({ navigation }: Props) {
     }
   }, []);
 
-  useFocusEffect(useCallback(() => { loadMoney(period); loadHabits(); setChartAnim(n => n + 1); }, [loadMoney, loadHabits, period]));
+  useFocusEffect(useCallback(() => { loadMoney(period); loadHabits(); }, [loadMoney, loadHabits, period]));
 
   const hasHabitsData = leaderboard.some(l => l.streak > 0) || habitStats.activeCount > 0;
 
@@ -135,7 +134,7 @@ export default function ReportsScreen({ navigation }: Props) {
               <Text style={{ ...typography.caption, color: colors.neutral400, textTransform: 'uppercase' }}>Summary</Text>
               <PeriodMenu value={period} onChange={setPeriod} />
             </View>
-            <FadeInView trigger={`money-${period}-${summary.income}-${summary.expense}`}>
+            <React.Fragment>
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 18 }}>
               <SummaryTile label="Income" value={formatCurrency(summary.income)} bg={colors.incomeTint} fg={colors.income} />
               <SummaryTile label="Expense" value={formatCurrency(summary.expense)} bg={colors.expenseTint} fg={colors.expense} />
@@ -153,7 +152,6 @@ export default function ReportsScreen({ navigation }: Props) {
                     data={breakdown.map(b => ({ value: b.total, color: b.category_color }))}
                     centerLabel="Total"
                     centerValue={formatCurrency(breakdownTotal)}
-                    animateTrigger={chartAnim}
                     onSlicePress={(i) => {
                       const b = breakdown[i];
                       if (b) navigation.navigate('CategoryDrilldown', { categoryId: b.category_id, period });
@@ -199,7 +197,6 @@ export default function ReportsScreen({ navigation }: Props) {
               data={monthLabels.map((label, i) => ({ label, a: trend[i]?.income ?? 0, b: trend[i]?.expense ?? 0 }))}
               barColorA={colors.income}
               barColorB={colors.expense}
-              animateTrigger={chartAnim}
             />
             <View style={{ flexDirection: 'row', gap: 18, marginTop: 8, marginBottom: 24 }}>
               <LegendDot color={colors.income} label="Income" />
@@ -207,8 +204,8 @@ export default function ReportsScreen({ navigation }: Props) {
             </View>
 
             <Text style={{ ...typography.h2, color: colors.neutral900, marginBottom: 6 }}>Balance trend</Text>
-            <TrendLineChart points={balanceSeries} color={colors.accent500} fillColor={colors.accentTint} animateTrigger={chartAnim} />
-            </FadeInView>
+            <TrendLineChart points={balanceSeries} color={colors.accent500} fillColor={colors.accentTint} />
+            </React.Fragment>
           </ScrollView>
         )
       )}

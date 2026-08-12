@@ -10,6 +10,16 @@ from `package.json` — the single source of truth, from which `versionName` and
 
 ---
 
+## [1.4.2] — 2026-08-11
+
+### Fixed
+- **Reports entrance animations removed.** The Expense Breakdown, Income vs Expense, and Balance
+  Trend sections no longer fade/slide in when the Reports tab opens — they appear immediately in
+  their final position. The horizontal swipe animation between the Money and Habits inner tabs is
+  unaffected.
+
+---
+
 ## [1.4.1] — 2026-08-03
 
 ### Fixed

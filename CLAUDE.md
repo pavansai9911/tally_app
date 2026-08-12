@@ -12,7 +12,7 @@ true as the code evolves.
 | **App** | Tally — offline personal money + habit tracker |
 | **Package** | `com.tally.app` |
 | **Platform** | Android only (no iOS project) |
-| **Current version** | see `package.json` → `version` (single source of truth) |
+| **Current version** | see `package.json` → `version` (single source of truth) — currently **1.4.2** |
 | **Branch** | `rn-cli-migration` (the original Expo app is on `main`) |
 | **Related docs** | [PROJECT_RULES.md](PROJECT_RULES.md) · [BUILD.md](BUILD.md) · [DECISIONS.md](DECISIONS.md) · [docs/architecture.md](docs/architecture.md) · [docs/ui_guidelines.md](docs/ui_guidelines.md) · [CHANGELOG.md](CHANGELOG.md) |
 
@@ -266,12 +266,16 @@ UI via the reserved `__send_feedback__` action — mirroring the `__close__` pat
 engine never touches `Linking`).
 
 ### Reports charts (`src/components/charts.tsx`)
-Custom SVG charts. Each takes an optional `animateTrigger`; `ReportsScreen` bumps it on focus +
-period change so the donut (clockwise draw), Income-vs-Expense bars (grow-up) and balance line
-(left-to-right draw) replay their entrance every time Reports opens. The donut legend shows the top
-4 categories + a **Remaining** roll-up; Remaining and the donut centre open `ExpenseCategoriesScreen`
-(all categories by %); category taps open `CategoryDrilldownScreen`, which is **period-aware**
-(`matchesPeriod` in `utils/period.ts`) so drill-downs work for every period, not just the month.
+Custom SVG charts. Each accepts an optional `animateTrigger`; as of v1.4.2 **`ReportsScreen` no
+longer passes `animateTrigger` to the donut, bar or line charts**, so the three Money sections
+(Expense Breakdown, Income vs Expense, Balance Trend) appear immediately at their final state when
+the Reports tab opens. The `FadeInView` wrapper was also removed from the Money sections (it remains
+on the Habits tab content). The `useRevealValue` hook in `charts.tsx` starts its animation at `t=0`
+on mount, so passing `animateTrigger` would re-run the draw-in; omitting it means the chart renders
+fully drawn. The donut legend shows the top 4 categories + a **Remaining** roll-up; Remaining and
+the donut centre open `ExpenseCategoriesScreen` (all categories by %); category taps open
+`CategoryDrilldownScreen`, which is **period-aware** (`matchesPeriod` in `utils/period.ts`) so
+drill-downs work for every period, not just the month.
 
 ---
 
