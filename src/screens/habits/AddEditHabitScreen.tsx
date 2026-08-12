@@ -34,6 +34,7 @@ export default function AddEditHabitScreen({ navigation, route }: Props) {
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderTime, setReminderTime] = useState('07:00');
   const [saved, setSaved] = useState(false);
+  const [nameError, setNameError] = useState(false);
 
   useEffect(() => {
     if (editId) {
@@ -60,6 +61,7 @@ export default function AddEditHabitScreen({ navigation, route }: Props) {
 
   async function handleSave() {
     if (!name.trim()) {
+      setNameError(true);
       haptic('notificationWarning');
       return;
     }
@@ -120,7 +122,19 @@ export default function AddEditHabitScreen({ navigation, route }: Props) {
           ))}
         </View>
 
-        <Input value={name} onChangeText={setName} placeholder="Habit name" focused />
+        <Input
+          value={name}
+          onChangeText={(t) => { setName(t); if (nameError) setNameError(false); }}
+          placeholder="Habit name"
+          focused={!nameError}
+          error={nameError}
+        />
+        {nameError && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -12, marginBottom: 14 }}>
+            <Feather name="alert-circle" size={13} color={colors.expense} />
+            <Text style={{ ...typography.bodySmallMedium, color: colors.expense }}>Enter a habit name</Text>
+          </View>
+        )}
 
         <View style={{ flexDirection: 'row', gap: 8, marginBottom: 18 }}>
           <SegmentOption label="Build" selected={type === 'build'} onPress={() => setType('build')} />

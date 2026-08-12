@@ -128,6 +128,21 @@ into them. Never put SQL or persistence logic in a screen.
   budget must **update** it (see `getBudgetByCategory`), never insert a duplicate — duplicates
   double-count in reports.
 
+### Category rules
+- **Ordering** is `sort_order ASC`, but the default **"Other" is always pinned last** via a
+  `CASE WHEN default_key = 'other'` in the ORDER BY — it never moves, even with drag-drop. New
+  categories get `MIN(sort_order) - 1` so they appear at the top. `reorderCategories()` rewrites
+  `sort_order` for the dragged set (see `DraggableCategoryList`, a no-dependency PanResponder list).
+- **`default_key`** (added in migration v3) is a stable id for each seeded default, independent of
+  its name. Deleting a default records its key in the `deleted_default_keys` tombstone so a future
+  update's default-seeding never resurrects it.
+
+### Account views & transfers
+- Per-account screens use `listAccountTransactions()` / `getAccountBalance()` / `getAccountFlow()`,
+  which are **transfer-aware on both sides**: a transfer is OUT for `account_id`, IN for
+  `to_account_id`. The plain `account_id`-only filter (old AccountDetail) showed the wrong balance
+  for a received transfer — always include both sides.
+
 ---
 
 ## 6. Dates, time and currency
@@ -239,6 +254,24 @@ does not). Design points that bite if forgotten:
 **Developer/testing utility**, exposed in Settings and clearly labelled. Generates realistic
 3/6/12-month or large datasets. Seeded ids are recorded in `settings`, so re-running **replaces**
 rather than duplicates, and it can be cleanly removed.
+
+### Feedback (`src/services/feedback.ts`)
+Offline "Send feedback": builds a `mailto:` intent (via `Linking`) to the hardcoded developer
+address with a subject and a body that auto-appends app version, Android version, device model and
+timestamp (from `Platform.constants` — no extra dependency, no network). The user reviews and sends
+in their own mail app. Two entry points: **Settings → About → Send feedback** (`FeedbackScreen`),
+and the **Tally Assistant** (a `feedback` flow, offered on the fallback/unrecognised turn and on
+explicit intents; the drafted email is carried on `AssistantReply.feedback` and opened by the chat
+UI via the reserved `__send_feedback__` action — mirroring the `__close__` pattern, so the offline
+engine never touches `Linking`).
+
+### Reports charts (`src/components/charts.tsx`)
+Custom SVG charts. Each takes an optional `animateTrigger`; `ReportsScreen` bumps it on focus +
+period change so the donut (clockwise draw), Income-vs-Expense bars (grow-up) and balance line
+(left-to-right draw) replay their entrance every time Reports opens. The donut legend shows the top
+4 categories + a **Remaining** roll-up; Remaining and the donut centre open `ExpenseCategoriesScreen`
+(all categories by %); category taps open `CategoryDrilldownScreen`, which is **period-aware**
+(`matchesPeriod` in `utils/period.ts`) so drill-downs work for every period, not just the month.
 
 ---
 

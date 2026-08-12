@@ -9,10 +9,12 @@ import { haptic } from '@/utils/haptics';
 import { AssistantAvatar, AssistantAvatarWithStatus } from './AssistantAvatar';
 import { TypingDots } from './TypingDots';
 import { createAssistantEngine, AssistantReply, ChatMessage, Suggestion } from '@/assistant';
-import { CLOSE_ACTION } from '@/assistant/intents';
+import { CLOSE_ACTION, FEEDBACK_ACTION, CLOSE_SUGGESTION } from '@/assistant/intents';
+import { openFeedbackEmail, FEEDBACK_EMAIL } from '@/services/feedback';
 
 let seq = 0;
 const nextId = () => `m${Date.now()}_${seq++}`;
+const sleep = (ms: number) => new Promise<void>((resolve) => { setTimeout(resolve, ms); });
 
 /** Reveals text character-by-character, then reports completion. */
 function useTypewriter(full: string, enabled: boolean, onDone?: () => void) {
@@ -122,7 +124,34 @@ export function AssistantSheet({
   const scrollRef = useRef<ScrollView>(null);
   // Guards the window between sending and the reply starting, where `pending` is still false.
   const busyRef = useRef(false);
+  // Latest feedback draft carried on a reply; the "Send email" chip opens it in the mail app.
+  const feedbackRef = useRef<{ subject: string; body: string } | null>(null);
+  // Resolves when the currently-typing bubble finishes, so the NEXT bubble (or the chips) only
+  // appears after it — never mid-typewriter. Set per-bubble in pushReply, fired by onTyped.
+  const typingWaitRef = useRef<{ id: string; resolve: () => void } | null>(null);
+  // Bumped on every open/close. A pushReply run captures the current value and bails if it
+  // changes, so a reply interrupted by closing never leaks bubbles into the next conversation.
+  const genRef = useRef(0);
   const slide = useRef(new Animated.Value(0)).current;
+
+  // Called when a bubble's typewriter completes. Scrolls, and releases pushReply's wait for that
+  // exact bubble id.
+  const handleBubbleTyped = useCallback((id: string) => {
+    scrollRef.current?.scrollToEnd({ animated: true });
+    const w = typingWaitRef.current;
+    if (w && w.id === id) { typingWaitRef.current = null; w.resolve(); }
+  }, []);
+
+  // Wait for the bubble `id` (showing `text`) to finish typing. Resolves on onTyped, with a
+  // computed-duration + margin fallback in case the callback never fires (e.g. sheet closed).
+  const waitForBubbleTyped = useCallback((id: string, text: string) => new Promise<void>((resolve) => {
+    let done = false;
+    const finish = () => { if (done) return; done = true; if (typingWaitRef.current?.id === id) typingWaitRef.current = null; resolve(); };
+    typingWaitRef.current = { id, resolve: finish };
+    const step = text.length > 160 ? 3 : 1;            // must match useTypewriter
+    const fallbackMs = Math.ceil(text.length / step) * 16 + 1200;
+    setTimeout(finish, fallbackMs);
+  }), []);
 
   // Sheet enter / exit
   useEffect(() => {
@@ -135,19 +164,30 @@ export function AssistantSheet({
   }, [visible, slide]);
 
   const pushReply = useCallback(async (reply: AssistantReply) => {
+    const myGen = genRef.current;
+    const alive = () => genRef.current === myGen;
     setSuggestions([]);
     setNav(null);
-    // Bubbles arrive one at a time with a short "thinking" pause between them.
+    // Remember (or clear) the drafted feedback email this reply carries.
+    feedbackRef.current = reply.feedback ?? null;
+    // Bubbles arrive one at a time: a "thinking" pause, the bubble, then we WAIT for it to
+    // finish typewriting before the next bubble (or the chips) appears.
     for (let i = 0; i < reply.messages.length; i++) {
+      if (!alive()) return;
+      const text = reply.messages[i];
       setPending(true);
-      await new Promise<void>((resolve) => { setTimeout(() => resolve(), i === 0 ? 420 : 320); });
+      await sleep(i === 0 ? 420 : 320);
+      if (!alive()) { setPending(false); return; }
       setPending(false);
+      const id = nextId();
       setMessages((prev) => [
         ...prev,
-        { id: nextId(), role: 'assistant', text: reply.messages[i], createdAt: Date.now(), animate: true },
+        { id, role: 'assistant', text, createdAt: Date.now(), animate: true },
       ]);
-      await new Promise<void>((resolve) => { setTimeout(() => resolve(), 120); });
+      await waitForBubbleTyped(id, text);
+      await sleep(160); // small breath after a bubble completes
     }
+    if (!alive()) return;
     if (reply.success) {
       haptic('notificationSuccess');
       // The assistant just wrote to the database — refresh the screen behind the sheet.
@@ -158,10 +198,13 @@ export function AssistantSheet({
       setNav(reply.navigate);
       setNavLabel(reply.navigateLabel ?? 'Open');
     }
-  }, [onDataChanged]);
+  }, [onDataChanged, waitForBubbleTyped]);
 
   // Every open starts a fresh conversation.
   useEffect(() => {
+    // New generation on any open/close so an in-flight reply from the previous state bails out.
+    genRef.current += 1;
+    typingWaitRef.current = null;
     if (visible) {
       engine.greet().then(pushReply);
     } else {
@@ -183,6 +226,20 @@ export function AssistantSheet({
       // Reserved UI action: dismiss the assistant rather than asking the engine.
       if (text === CLOSE_ACTION) {
         onClose();
+        return;
+      }
+      // Reserved UI action: open the drafted feedback email in the user's mail app.
+      if (text === FEEDBACK_ACTION) {
+        const draft = feedbackRef.current;
+        if (draft) {
+          const ok = await openFeedbackEmail(draft.subject, draft.body);
+          if (!ok) {
+            await pushReply({
+              messages: [`I couldn't find an email app on this phone. You can email your feedback to ${FEEDBACK_EMAIL} directly.`],
+              suggestions: [CLOSE_SUGGESTION],
+            });
+          }
+        }
         return;
       }
       if (!text || busyRef.current) return;
@@ -252,7 +309,7 @@ export function AssistantSheet({
               keyboardShouldPersistTaps="handled"
             >
               {messages.map((m) => (
-                <Bubble key={m.id} message={m} onTyped={() => scrollRef.current?.scrollToEnd({ animated: true })} />
+                <Bubble key={m.id} message={m} onTyped={() => handleBubbleTyped(m.id)} />
               ))}
               {pending && (
                 <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginBottom: 10 }}>

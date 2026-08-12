@@ -23,3 +23,13 @@ export function periodStartKey(period: PeriodKey, from: Date = new Date()): stri
   const back = period === 'month' ? 0 : period === '3m' ? 2 : 5;
   return monthKey(new Date(from.getFullYear(), from.getMonth() - back, 1));
 }
+
+/**
+ * Does a stored `occurred_at` ('YYYY-MM-DD HH:MM') fall inside a period? Mirrors the breakdown
+ * queries: `month` is the exact current month (prefix), ranges are `>= start`, `all` is always.
+ */
+export function matchesPeriod(occurredAt: string, period: PeriodKey): boolean {
+  if (period === 'month') return occurredAt.startsWith(monthKey());
+  const start = periodStartKey(period);
+  return !start || occurredAt >= start;
+}

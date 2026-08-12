@@ -55,7 +55,7 @@ export const addExpense: AssistantTool = {
     let category = await resolveCategory(args.category, 'expense');
     if (!category && args.category) {
       const id = await createCategory({ name: args.category, type: 'expense', icon: 'ti-dots', color: '#6B7280' });
-      category = { id, name: args.category, type: 'expense', icon: 'ti-dots', color: '#6B7280', archived: 0 };
+      category = { id, name: args.category, type: 'expense', icon: 'ti-dots', color: '#6B7280', archived: 0, sort_order: 0, default_key: null };
     }
     await createTransaction({
       type: 'expense',
@@ -88,7 +88,7 @@ export const addIncome: AssistantTool = {
     let category = await resolveCategory(args.category, 'income');
     if (!category && args.category) {
       const id = await createCategory({ name: args.category, type: 'income', icon: 'ti-briefcase', color: '#1A9E6B' });
-      category = { id, name: args.category, type: 'income', icon: 'ti-briefcase', color: '#1A9E6B', archived: 0 };
+      category = { id, name: args.category, type: 'income', icon: 'ti-briefcase', color: '#1A9E6B', archived: 0, sort_order: 0, default_key: null };
     }
     await createTransaction({
       type: 'income',
@@ -148,7 +148,7 @@ export const createBudgetTool: AssistantTool = {
     let category = await resolveCategory(args.category, 'expense');
     if (!category) {
       const id = await createCategory({ name: args.category, type: 'expense', icon: 'ti-dots', color: '#6B7280' });
-      category = { id, name: args.category, type: 'expense', icon: 'ti-dots', color: '#6B7280', archived: 0 };
+      category = { id, name: args.category, type: 'expense', icon: 'ti-dots', color: '#6B7280', archived: 0, sort_order: 0, default_key: null };
     }
     // A category holds at most one budget: update the existing one rather than
     // creating a duplicate (which would double-count in reports).

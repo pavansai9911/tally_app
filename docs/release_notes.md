@@ -6,6 +6,65 @@ For the engineering view, see [../CHANGELOG.md](../CHANGELOG.md).
 
 ---
 
+## Version 1.4.1
+
+**Small polish**
+
+- Forms now clearly flag a missing required field — the box turns red with a short hint — instead
+  of nothing happening when you tap Save.
+- The Tally Assistant shows its messages one at a time, waiting for each to finish before the next
+  appears.
+- The charts on the Reports tab animate in more smoothly.
+
+## Version 1.4.0
+
+**Feedback, richer reports, and a little polish**
+
+- **Send us feedback, still 100% offline.** In Settings → About → *Send feedback*, jot a subject
+  and message and tap Send — your email app opens with everything filled in (including your app
+  and device details) so we can help. You always press Send yourself; nothing leaves your phone
+  on its own. The Tally Assistant can help you draft feedback too, especially when it can't answer
+  something.
+- **See every expense category.** The Reports breakdown now shows your top 4 plus a **Remaining**
+  line. Tap **Remaining**, or the **Total** in the middle of the ring, to see the full list of
+  categories with their percentages — then tap any one to see its transactions. Works for all time
+  ranges now, not just this month.
+- **Reports come to life.** The breakdown ring, the income-vs-expense bars and the balance line now
+  animate in each time you open Reports.
+- **Home & Money tidy-ups.** The balance card fits long account names cleanly; the Income/Expense
+  totals on the Money tab now follow your filters; and you can tap those Income/Expense cards to
+  quickly show just income or just expense.
+
+## Version 1.3.1
+
+**Filter controls stay put**
+
+- Fixed: on Home, picking an account (or time period) with no activity made the balance
+  overview and its dropdowns disappear, so you couldn't switch back. The dropdowns now always
+  stay visible — an empty selection just shows ₹0.
+- Fixed the same thing in Reports: choosing a period with nothing in it no longer hides the
+  period selector.
+
+## Version 1.3.0
+
+**Account filtering, category reordering, and a clean-slate reset**
+
+- **See one account at a time on Home.** A new Account dropdown on the balance card lets you
+  focus the balance, the income/expense/net summary and recent activity on a single account —
+  and it remembers your choice next time you open the app.
+- **Put categories in your own order.** Drag the handle next to a category to reorder it (works
+  for both Expense and Income). New categories start at the top, and “Other” always stays last.
+- **Filter an account by In or Out.** Open an account and tap IN or OUT to see only money coming
+  in or going out; tap again to see everything.
+- **Transfers look right everywhere.** A transfer now shows as OUT on the account it left and IN
+  on the account it reached, and account balances count transfers correctly.
+- **Edit a category straight from Reports.** Tap a slice in the expense breakdown, then the edit
+  icon, to rename or recolour that category.
+- **Cleaner transaction details.** Long notes now have room to breathe and are easy to read.
+- **Start over if you want to.** Settings now has a Hard Reset that wipes everything — including
+  the automatic backup — after you type DELETE to confirm. Useful if you ever want to stop using
+  the on-device backup and begin completely fresh.
+
 ## Version 1.2.0
 
 **Never lose your data to a reinstall**

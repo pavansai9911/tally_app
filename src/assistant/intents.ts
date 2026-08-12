@@ -81,14 +81,21 @@ export const INTENTS: IntentDef[] = [
   { id: 'bye', utterances: ['bye', 'goodbye', 'see you', 'close'], reply: 'Talk soon! Tap the assistant button whenever you need me.' },
   { id: 'who_are_you', utterances: ['who are you', 'what are you', 'your name', 'about you'], reply: "I'm the Tally Assistant. I can add transactions, create budgets and habits, and answer questions about your money — all offline, right on this device." },
   { id: 'capabilities', utterances: ['what can you do', 'help', 'options', 'commands', 'how to use'], reply: "I can:\n• Add expenses, income and transfers\n• Create budgets, accounts and habits\n• Summarise spending, income and savings\n• Check budgets, streaks and recent activity\n• Explain any part of the app\n\nJust talk normally — try \"I spent 500 on food\".", suggestions: s('Add Expense', 'Monthly summary', "Today's habits", 'Others') },
-  { id: 'others', utterances: ['others', 'other', 'more', 'more options', 'show more'], reply: 'Here are some things I can help with:', suggestions: s('Transfer Money', 'Create Budget', 'Add Habit', "Today's Habits", 'Habit streaks', 'View Reports', 'Monthly Summary', 'Recent Transactions', 'Accounts', 'Settings') },
+  { id: 'others', utterances: ['others', 'other', 'more', 'more options', 'show more'], reply: 'Here are some things I can help with:', suggestions: s('Transfer Money', 'Create Budget', 'Add Habit', "Today's Habits", 'Habit streaks', 'View Reports', 'Monthly Summary', 'Recent Transactions', 'Accounts', 'Settings', 'Send feedback') },
   { id: 'cancel', utterances: ['cancel', 'stop', 'nevermind', 'never mind', 'forget it', 'abort'], reply: 'No problem — cancelled. What else can I do?', suggestions: s('Add Expense', 'Add Income', 'Others'), priority: 5 },
+
+  // ---------------- Feedback ----------------
+  { id: 'send_feedback', utterances: ['send feedback', 'feedback', 'report a bug', 'report bug', 'report issue', 'report a problem', 'contact developer', 'contact support', 'contact the developer', 'email developer', 'suggest a feature', 'feature request', 'request a feature', 'raise an issue', 'give feedback', 'i found a bug', 'something is broken', 'this is not working', 'get help', 'talk to a human', 'reach the developer'], flow: 'feedback', priority: 4 },
 ];
 
 /** Chips shown on first open. */
 export const STARTER_SUGGESTIONS: Suggestion[] = s('Add Expense', 'Add Income', 'Others');
 
-export const FALLBACK_SUGGESTIONS: Suggestion[] = s('Add Expense', 'Monthly summary', 'What can you do', 'Others');
+export const FALLBACK_SUGGESTIONS: Suggestion[] = [
+  ...s('Add Expense', 'Monthly summary', 'What can you do'),
+  { label: 'Send feedback', value: 'send feedback' },
+  ...s('Others'),
+];
 
 /**
  * Reserved value handled by the chat UI itself (not the engine): dismisses the assistant
@@ -96,6 +103,13 @@ export const FALLBACK_SUGGESTIONS: Suggestion[] = s('Add Expense', 'Monthly summ
  */
 export const CLOSE_ACTION = '__close__';
 export const CLOSE_SUGGESTION: Suggestion = { label: 'Close', value: CLOSE_ACTION };
+
+/**
+ * Reserved value handled by the chat UI: opens the mail app with the drafted feedback email
+ * carried on the reply's `feedback` field. Not sent to the engine.
+ */
+export const FEEDBACK_ACTION = '__send_feedback__';
+export const FEEDBACK_SUGGESTION: Suggestion = { label: 'Send email', value: FEEDBACK_ACTION };
 
 /** Chips shown right after a successful action — same options plus a way out. */
 export const SUCCESS_SUGGESTIONS: Suggestion[] = [

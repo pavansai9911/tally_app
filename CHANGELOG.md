@@ -10,6 +10,99 @@ from `package.json` — the single source of truth, from which `versionName` and
 
 ---
 
+## [1.4.1] — 2026-08-03
+
+### Fixed
+- **Form validation feedback.** Tapping Save/Create with a required field empty now turns that
+  field's border **red** with a short inline message (instead of silently doing nothing). Applied
+  across all forms: **habit name**, **account name**, **category name**, **recurring name +
+  amount**, and **budget limit** (transactions already had this).
+- **Tally Assistant message pacing.** When a reply has multiple bubbles, the next bubble now waits
+  for the previous one to finish typing before it appears (it used to overlap mid-typewriter). The
+  suggestion chips also wait for the last bubble. A reply interrupted by closing the assistant no
+  longer leaks bubbles into the next conversation.
+
+### Changed
+- **Smoother Reports chart animations.** The Expense-breakdown donut, the Income-vs-Expense bars
+  and the Balance-trend line are now driven by animated SVG props instead of per-frame React
+  re-renders, so the draw-in is noticeably smoother (no stutter when all three animate at once).
+
+## [1.4.0] — 2026-08-03
+
+### Added
+- **Send feedback (offline).** New Settings → About → *Send feedback* form (subject + message)
+  that opens your mail app with everything pre-drafted — your message plus app version, Android
+  version, device model and timestamp — addressed to the developer. Nothing is sent automatically;
+  you review and press Send. Uses a `mailto:` intent, so it stays fully offline (no network from
+  the app). If no mail app exists, a themed dialog shows the address.
+- **Feedback via the Tally Assistant.** When the assistant can't answer, or when you ask
+  ("send feedback", "report a bug", "contact developer"…), it collects three quick answers and
+  hands the drafted email to your mail app the same way.
+- **Reports → full expense breakdown.** The donut legend now shows the top 4 categories plus a
+  **Remaining** line (when there are more than 4). Tapping **Remaining** — or the **Total** in the
+  donut's centre — opens a new screen listing **every** expense category (highest→lowest) with a
+  percentage bar; tapping a category opens its transactions. Drill-downs now work for every period
+  (This month / 3M / 6M / All time), not just the current month.
+- **Report chart animations.** The Expense-breakdown donut draws in clockwise, the Income-vs-Expense
+  bars grow up, and the Balance-trend line draws left-to-right — replayed each time you open the
+  Reports tab or change the period.
+
+### Changed
+- **Home hero:** removed the "Overview" label; the account and period dropdowns are left-aligned,
+  and a long account name now ellipsizes so the period pill never overflows the card (pure flexbox,
+  adapts to any screen/font size).
+- **Money filter summary:** the Income/Expense cards now reflect the current category/month filter
+  scope instead of a fixed "this month" total.
+- **Money Income/Expense cards are now tap-to-filter:** tap Income to show only income, tap Expense
+  for only expense, tap the active one again to reset. The active card is highlighted (mirrors the
+  account screen's IN/OUT behaviour).
+
+## [1.3.1] — 2026-08-02
+
+### Fixed
+- **Home hero controls no longer disappear.** Selecting an account (or period) whose view had no
+  transactions made the whole Overview block — including the Account and period dropdowns — vanish,
+  leaving no way to change the filter back. The dropdowns now stay visible whenever you have any
+  accounts; the income/expense/net figures simply show ₹0 for an empty selection.
+- **Reports period control no longer disappears** for the same reason: picking a period with no
+  data used to replace the page (and its period dropdown) with an empty state. Reports now shows
+  the empty state only when there are no transactions at all; otherwise the period control stays
+  and an empty period shows zeros with a short "No expenses in this period" note.
+- **Deleted-account safety:** if the account currently selected on Home is deleted, the dashboard
+  falls back to “All accounts” instead of getting stuck on a missing account.
+
+## [1.3.0] — 2026-08-02
+
+### Added
+- **Home account filter.** A new **Account** dropdown on the hero (between Overview and the
+  period) scopes Total Balance, the income/expense/net overview and Recent transactions to a
+  single account, or “All accounts”. The choice is **persisted** across app restarts. Budgets
+  stay all-accounts (they’re per-category).
+- **Drag-to-reorder categories.** Long-lived custom reorder (grip handle) for both Expense and
+  Income categories, saved instantly — built with PanResponder/Animated, no new native
+  dependency. New categories appear at the top; **“Other” is pinned to the bottom** and can’t be
+  moved.
+- **Account IN / OUT filter.** On an account’s detail screen the IN and OUT cards are now tap
+  filters (tap to show only that direction, tap again to reset to All).
+- **Edit a category from Reports.** The expense-breakdown drill-down has an edit icon that opens
+  that category’s edit screen (stays in the Reports tab).
+- **Hard Reset** (Settings → Danger zone). A production-grade, irreversible wipe: a warning
+  dialog, then a type-**DELETE**-to-confirm screen. Erases all data, the PIN, **and the
+  automatic backup**, returning the app to a genuine fresh-install state.
+
+### Fixed
+- **Transfers now show correctly in the account view (#10).** An account that received a
+  transfer shows it as **IN**; the sending account shows it as **OUT**. The account balance and
+  IN/OUT totals include transfers (previously they were ignored, so a transferred-into account
+  showed the wrong balance).
+- **Account transaction rows lead with the Category** (not the note) and are now **tappable** —
+  they open the transaction details.
+- **Long notes** on the transaction details screen get a dedicated full-width block instead of
+  being squeezed into a right-aligned column.
+- **“Other” no longer drifts** when you add categories — it always stays at the bottom.
+- **Deleting a default category is now remembered** (a tombstone keyed by a stable `default_key`),
+  so a future app update won’t recreate it.
+
 ## [1.2.0] — 2026-07-26
 
 ### Added

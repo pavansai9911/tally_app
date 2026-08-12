@@ -43,6 +43,12 @@ export interface AssistantReply {
   navigate?: AssistantNavigation;
   /** Optional label for the navigate affordance. */
   navigateLabel?: string;
+  /**
+   * When set, the reply carries a drafted feedback email. The chat UI opens the user's mail app
+   * (via a mailto: intent) when the reserved "Send email" chip is tapped — the engine never
+   * touches Linking itself, keeping this UI concern out of the offline engine.
+   */
+  feedback?: { subject: string; body: string };
 }
 
 /**

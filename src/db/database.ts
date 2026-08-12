@@ -64,13 +64,18 @@ async function runMigrations(db: SqlDb): Promise<void> {
 async function seedDefaultsIfEmpty(db: SqlDb): Promise<void> {
   const row = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM categories');
   if (row && row.count === 0) {
-    for (const cat of DEFAULT_CATEGORIES) {
-      await db.runAsync('INSERT INTO categories (id, name, type, icon, color) VALUES (?, ?, ?, ?, ?)', [
+    // sort_order follows the declared order so defaults display top-to-bottom as listed; a new
+    // user category later gets MIN(sort_order)-1 to appear above them (see createCategory).
+    for (let i = 0; i < DEFAULT_CATEGORIES.length; i++) {
+      const cat = DEFAULT_CATEGORIES[i];
+      await db.runAsync('INSERT INTO categories (id, name, type, icon, color, sort_order, default_key) VALUES (?, ?, ?, ?, ?, ?, ?)', [
         genId('cat'),
         cat.name,
         cat.type,
         cat.icon,
         cat.color,
+        i,
+        cat.key,
       ]);
     }
   }

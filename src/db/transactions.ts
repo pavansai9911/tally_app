@@ -79,16 +79,18 @@ export interface MonthSummary {
   net: number;
 }
 
-export async function getMonthSummary(monthKey: string): Promise<MonthSummary> {
-  // monthKey format: 'YYYY-MM'
+export async function getMonthSummary(monthKey: string, accountId?: string): Promise<MonthSummary> {
+  // monthKey format: 'YYYY-MM'. Optional accountId scopes income/expense to one account.
   const db = await getDb();
+  const acc = accountId ? 'AND account_id = ?' : '';
+  const params = accountId ? [monthKey, accountId] : [monthKey];
   const row = await db.getFirstAsync<{ income: number; expense: number }>(
     `SELECT
       COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE 0 END), 0) as income,
       COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END), 0) as expense
      FROM transactions
-     WHERE occurred_at LIKE ? || '%'`,
-    [monthKey]
+     WHERE occurred_at LIKE ? || '%' ${acc}`,
+    params
   );
   const income = row?.income ?? 0;
   const expense = row?.expense ?? 0;
@@ -142,10 +144,13 @@ export async function getExpenseBreakdownByCategory(monthKey: string): Promise<C
  * `occurred_at >= 'YYYY-MM'` works because the stored format ('YYYY-MM-DD HH:MM') sorts
  * lexicographically and the bare month prefix is <= any timestamp within that month.
  */
-export async function getRangeSummary(startMonthKey: string | null): Promise<MonthSummary> {
+export async function getRangeSummary(startMonthKey: string | null, accountId?: string): Promise<MonthSummary> {
   const db = await getDb();
-  const where = startMonthKey ? 'WHERE occurred_at >= ?' : '';
-  const params = startMonthKey ? [startMonthKey] : [];
+  const conds: string[] = [];
+  const params: unknown[] = [];
+  if (startMonthKey) { conds.push('occurred_at >= ?'); params.push(startMonthKey); }
+  if (accountId) { conds.push('account_id = ?'); params.push(accountId); }
+  const where = conds.length ? `WHERE ${conds.join(' AND ')}` : '';
   const row = await db.getFirstAsync<{ income: number; expense: number }>(
     `SELECT
       COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE 0 END), 0) as income,
@@ -195,4 +200,88 @@ export async function getDailyBalanceSeries(startDate: string, endDate: string):
      ORDER BY occurred_at ASC`,
     [startDate, endDate]
   );
+}
+
+// ---------------- ACCOUNT-SCOPED (transfer-aware) ----------------
+
+/** Transfer-aware balance for a single account (matches the formula in listAccounts). */
+export async function getAccountBalance(accountId: string): Promise<number> {
+  const db = await getDb();
+  const row = await db.getFirstAsync<{ bal: number }>(
+    `SELECT a.starting_balance
+       + COALESCE((SELECT SUM(CASE WHEN t.type='income' THEN t.amount WHEN t.type='expense' THEN -t.amount ELSE 0 END)
+                   FROM transactions t WHERE t.account_id = a.id), 0)
+       - COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.type='transfer' AND t.account_id = a.id), 0)
+       + COALESCE((SELECT SUM(t.amount) FROM transactions t WHERE t.type='transfer' AND t.to_account_id = a.id), 0)
+       AS bal
+     FROM accounts a WHERE a.id = ?`,
+    [accountId],
+  );
+  return row?.bal ?? 0;
+}
+
+/** Total money IN (income + transfers received) and OUT (expense + transfers sent) for an account. */
+export async function getAccountFlow(accountId: string): Promise<{ inflow: number; outflow: number }> {
+  const db = await getDb();
+  const row = await db.getFirstAsync<{ inflow: number; outflow: number }>(
+    `SELECT
+       COALESCE(SUM(CASE WHEN t.type='income' THEN t.amount
+                         WHEN t.type='transfer' AND t.to_account_id = ? THEN t.amount ELSE 0 END), 0) as inflow,
+       COALESCE(SUM(CASE WHEN t.type='expense' THEN t.amount
+                         WHEN t.type='transfer' AND t.account_id = ? THEN t.amount ELSE 0 END), 0) as outflow
+     FROM transactions t
+     WHERE t.account_id = ? OR (t.type='transfer' AND t.to_account_id = ?)`,
+    [accountId, accountId, accountId, accountId],
+  );
+  return { inflow: row?.inflow ?? 0, outflow: row?.outflow ?? 0 };
+}
+
+export interface AccountTransaction extends TransactionWithDetails {
+  /** 'in' or 'out' from THIS account's perspective (a transfer is out for the sender, in for the receiver). */
+  direction: 'in' | 'out';
+  /** For a transfer: the other account's name (destination if outgoing, source if incoming). */
+  counterparty_name: string | null;
+}
+
+/**
+ * Transactions that touch an account, from that account's perspective — including transfers on
+ * BOTH sides (sent and received), each tagged with a per-account direction. Optional filter:
+ * 'in' shows only incoming, 'out' only outgoing.
+ */
+export async function listAccountTransactions(
+  accountId: string,
+  opts?: { limit?: number; direction?: 'in' | 'out' },
+): Promise<AccountTransaction[]> {
+  const db = await getDb();
+  const dirFilter = opts?.direction
+    ? (opts.direction === 'in'
+        ? "AND (t.type='income' OR (t.type='transfer' AND t.to_account_id = ?))"
+        : "AND (t.type='expense' OR (t.type='transfer' AND t.account_id = ?))")
+    : '';
+  const sql = `
+    SELECT t.*, c.name as category_name, c.icon as category_icon, c.color as category_color,
+           a.name as account_name,
+           CASE
+             WHEN t.type='income' THEN 'in'
+             WHEN t.type='expense' THEN 'out'
+             WHEN t.type='transfer' AND t.account_id = ? THEN 'out'
+             ELSE 'in'
+           END as direction,
+           CASE
+             WHEN t.type='transfer' AND t.account_id = ? THEN ta.name
+             WHEN t.type='transfer' AND t.to_account_id = ? THEN a.name
+             ELSE NULL
+           END as counterparty_name
+    FROM transactions t
+    LEFT JOIN categories c ON c.id = t.category_id
+    JOIN accounts a ON a.id = t.account_id
+    LEFT JOIN accounts ta ON ta.id = t.to_account_id
+    WHERE (t.account_id = ? OR (t.type='transfer' AND t.to_account_id = ?)) ${dirFilter}
+    ORDER BY t.occurred_at DESC
+    ${opts?.limit ? 'LIMIT ?' : ''}`;
+  // Param order matches the ?s above: direction CASE, counterparty CASE (x2), WHERE (x2), dirFilter?, limit?
+  const params: unknown[] = [accountId, accountId, accountId, accountId, accountId];
+  if (opts?.direction) params.push(accountId);
+  if (opts?.limit) params.push(opts.limit);
+  return db.getAllAsync<AccountTransaction>(sql, params);
 }

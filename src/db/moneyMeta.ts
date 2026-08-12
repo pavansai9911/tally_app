@@ -7,39 +7,83 @@ export interface Category {
   icon: string;
   color: string;
   archived: number;
+  sort_order: number;
+  /** Stable id for a seeded default (e.g. 'other'); null for user-created categories. */
+  default_key: string | null;
 }
+
+// The default "Other" category is always pinned to the very bottom, regardless of sort_order or
+// any drag-drop reordering. Everything else follows sort_order (new categories sort above).
+const ORDER_BY = "ORDER BY (CASE WHEN default_key = 'other' THEN 1 ELSE 0 END) ASC, sort_order ASC";
 
 export async function listCategories(type?: 'expense' | 'income'): Promise<Category[]> {
   const db = await getDb();
   if (type) {
     return db.getAllAsync<Category>(
-      'SELECT * FROM categories WHERE archived = 0 AND type = ? ORDER BY sort_order ASC',
+      `SELECT * FROM categories WHERE archived = 0 AND type = ? ${ORDER_BY}`,
       [type]
     );
   }
-  return db.getAllAsync<Category>('SELECT * FROM categories WHERE archived = 0 ORDER BY sort_order ASC');
+  return db.getAllAsync<Category>(`SELECT * FROM categories WHERE archived = 0 ${ORDER_BY}`);
 }
 
-export async function createCategory(input: Omit<Category, 'id' | 'archived'>): Promise<string> {
+export async function createCategory(input: Omit<Category, 'id' | 'archived' | 'sort_order' | 'default_key'>): Promise<string> {
   const db = await getDb();
   const id = genId('cat');
+  // Place new categories at the TOP of their type: one below the current minimum sort_order.
+  const min = await db.getFirstAsync<{ m: number | null }>(
+    'SELECT MIN(sort_order) as m FROM categories WHERE type = ?', [input.type],
+  );
+  const sortOrder = (min?.m ?? 0) - 1;
   await db.runAsync(
-    'INSERT INTO categories (id, name, type, icon, color) VALUES (?, ?, ?, ?, ?)',
-    [id, input.name, input.type, input.icon, input.color]
+    'INSERT INTO categories (id, name, type, icon, color, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
+    [id, input.name, input.type, input.icon, input.color, sortOrder]
   );
   return id;
 }
 
 export async function updateCategory(id: string, input: Partial<Category>): Promise<void> {
   const db = await getDb();
-  const { clause, values } = buildUpdate<Category>(input, ['name', 'type', 'icon', 'color', 'archived']);
+  const { clause, values } = buildUpdate<Category>(input, ['name', 'type', 'icon', 'color', 'archived', 'sort_order']);
   if (!clause) return;
   await db.runAsync(`UPDATE categories SET ${clause} WHERE id = ?`, [...values, id]);
 }
 
+/** Persist a manual (drag-drop) reorder: sort_order becomes the position in `orderedIds`. */
+export async function reorderCategories(orderedIds: string[]): Promise<void> {
+  const db = await getDb();
+  for (let i = 0; i < orderedIds.length; i++) {
+    await db.runAsync('UPDATE categories SET sort_order = ? WHERE id = ?', [i, orderedIds[i]]);
+  }
+}
+
+const DELETED_DEFAULTS_KEY = 'deleted_default_keys';
+
+/** Default categories the user has deleted — never recreate these on a future app update. */
+export async function getDeletedDefaultKeys(): Promise<string[]> {
+  const db = await getDb();
+  const row = await db.getFirstAsync<{ value: string }>('SELECT value FROM settings WHERE key = ?', [DELETED_DEFAULTS_KEY]);
+  if (!row?.value) return [];
+  try { return JSON.parse(row.value) as string[]; } catch { return []; }
+}
+
 export async function deleteCategory(id: string): Promise<void> {
   const db = await getDb();
+  const cat = await db.getFirstAsync<{ default_key: string | null }>(
+    'SELECT default_key FROM categories WHERE id = ?', [id],
+  );
   await db.runAsync('UPDATE categories SET archived = 1 WHERE id = ?', [id]);
+  // Tombstone a deleted default so a future update's default-seeding respects the choice.
+  if (cat?.default_key) {
+    const keys = await getDeletedDefaultKeys();
+    if (!keys.includes(cat.default_key)) {
+      keys.push(cat.default_key);
+      await db.runAsync(
+        'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+        [DELETED_DEFAULTS_KEY, JSON.stringify(keys)],
+      );
+    }
+  }
 }
 
 export async function countTransactionsForCategory(id: string): Promise<number> {
