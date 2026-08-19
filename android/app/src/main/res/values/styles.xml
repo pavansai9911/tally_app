@@ -6,4 +6,22 @@
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
     </style>
 
+    <!--
+      Splash screen theme — applied to MainActivity at launch so the OS shows the Tally
+      branded screen before any JavaScript loads. MainActivity's onCreate() immediately
+      calls setTheme(R.style.AppTheme) so the transition is instant and seamless.
+
+      windowBackground: the layer-list drawable (brand blue bg + centred logo).
+      windowNoTitle / windowActionBar: suppress any toolbar chrome on the splash.
+      android:statusBarColor: kept transparent so the splash fills edge-to-edge on
+      Android 5+ (the logo drawable already covers the full window).
+    -->
+    <style name="SplashTheme" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_screen</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowFullscreen">false</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
+
 </resources>

@@ -12,7 +12,7 @@ true as the code evolves.
 | **App** | Tally — offline personal money + habit tracker |
 | **Package** | `com.tally.app` |
 | **Platform** | Android only (no iOS project) |
-| **Current version** | see `package.json` → `version` (single source of truth) — currently **1.4.2** |
+| **Current version** | see `package.json` → `version` (single source of truth) — currently **1.4.3** |
 | **Branch** | `rn-cli-migration` (the original Expo app is on `main`) |
 | **Related docs** | [PROJECT_RULES.md](PROJECT_RULES.md) · [BUILD.md](BUILD.md) · [DECISIONS.md](DECISIONS.md) · [docs/architecture.md](docs/architecture.md) · [docs/ui_guidelines.md](docs/ui_guidelines.md) · [CHANGELOG.md](CHANGELOG.md) |
 

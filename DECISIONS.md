@@ -121,7 +121,7 @@ pulled in a screens version built for a newer React Native.
 ## Known follow-ups (need a device / designer, can't be done/verified in this headless env)
 
 - **On-device QA**: run the app on a real Android device and exercise every flow (no Android SDK here, so only `tsc` + Metro bundle are verified).
-- **App icon + splash**: generate an adaptive launcher icon and a splash from a designed Tally logo (`assets/icon.png` is a starting point). Use Android Studio's Image Asset or `@bam.tech/react-native-make`.
+- **App icon**: generate an adaptive launcher icon from a designed Tally logo (`assets/icon.png` is a starting point). Splash screen is now fully implemented (v1.4.3).
 - **R8/ProGuard**: enable `enableProguardInReleaseBuilds` and add keep rules if any native lib needs them (test the release AAB after enabling).
 - **Play Console**: Data Safety form (declare "no data collected/shared"), privacy policy URL, store listing assets, content rating.
 

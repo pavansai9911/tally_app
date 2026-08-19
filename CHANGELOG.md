@@ -10,6 +10,16 @@ from `package.json` — the single source of truth, from which `versionName` and
 
 ---
 
+## [1.4.3] — 2026-08-12
+
+### Added
+- **Production-grade App Launch Splash Screen.** Added a native Android window background splash screen (with Tally logo centered on blue background) and a matching React Native loading state splash screen for a completely seamless, premium startup transition.
+
+### Removed
+- **Unused shuffle icon from Habits tab.** Cleaned up the Habits screen header layout by completely removing the non-functional top-right shuffle icon and its container styling.
+
+---
+
 ## [1.4.2] — 2026-08-11
 
 ### Fixed
