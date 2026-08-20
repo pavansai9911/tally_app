@@ -16,6 +16,7 @@ import LockScreen from '@/screens/lock/LockScreen';
 import RestoreGateScreen from '@/screens/onboarding/RestoreGateScreen';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ConfirmProvider } from '@/components/ConfirmDialog';
+import { ExportProvider } from '@/components/ExportSheet';
 import { AppControlProvider } from '@/components/AppControl';
 import { TourProvider } from '@/tour/TourProvider';
 import { runStartupTasks } from '@/services/startup';
@@ -152,7 +153,9 @@ export default function App() {
       <SafeAreaProvider>
         <ThemeProvider>
           <ConfirmProvider>
-            <AppInner />
+            <ExportProvider>
+              <AppInner />
+            </ExportProvider>
           </ConfirmProvider>
         </ThemeProvider>
       </SafeAreaProvider>

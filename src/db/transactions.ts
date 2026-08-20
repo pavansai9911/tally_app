@@ -1,4 +1,5 @@
 import { getDb, genId, buildUpdate } from './database';
+import { addDaysKey } from '@/utils/format';
 
 export interface Transaction {
   id: string;
@@ -178,6 +179,80 @@ export async function getExpenseBreakdownByRange(startMonthKey: string | null): 
      ORDER BY total DESC`,
     params,
   );
+}
+
+/**
+ * Day-precision variants of getRangeSummary/getExpenseBreakdownByRange/listTransactions, used by
+ * the export sheet (which needs an arbitrary [start, end] window, not just a month-aligned start).
+ * `end` is inclusive; comparing against `addDaysKey(end, 1)` (exclusive) rather than `<= end`
+ * keeps the tolerance for both 'YYYY-MM-DD' and 'YYYY-MM-DD HH:MM' occurred_at rows — a bare date
+ * string on the end day still sorts below the next day's date string either way.
+ */
+export async function getSummaryInRange(start: string | null, end: string): Promise<MonthSummary> {
+  const db = await getDb();
+  const endExclusive = addDaysKey(end, 1);
+  const conds = ['occurred_at < ?'];
+  const params: unknown[] = [endExclusive];
+  if (start) { conds.unshift('occurred_at >= ?'); params.unshift(start); }
+  const row = await db.getFirstAsync<{ income: number; expense: number }>(
+    `SELECT
+      COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE 0 END), 0) as income,
+      COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END), 0) as expense
+     FROM transactions WHERE ${conds.join(' AND ')}`,
+    params,
+  );
+  const income = row?.income ?? 0;
+  const expense = row?.expense ?? 0;
+  return { income, expense, net: income - expense };
+}
+
+/** Expense-by-category breakdown for an arbitrary [start, end] window; start null = all-time. */
+export async function getExpenseBreakdownInRange(start: string | null, end: string): Promise<CategoryBreakdown[]> {
+  const db = await getDb();
+  const endExclusive = addDaysKey(end, 1);
+  const conds = ["t.type = 'expense'", 't.occurred_at < ?'];
+  const params: unknown[] = [endExclusive];
+  if (start) { conds.push('t.occurred_at >= ?'); params.push(start); }
+  return db.getAllAsync<CategoryBreakdown>(
+    `SELECT c.id as category_id, c.name as category_name, c.icon as category_icon, c.color as category_color,
+            SUM(t.amount) as total
+     FROM transactions t
+     JOIN categories c ON c.id = t.category_id
+     WHERE ${conds.join(' AND ')}
+     GROUP BY c.id
+     ORDER BY total DESC`,
+    params,
+  );
+}
+
+export interface TransactionExportRow extends TransactionWithDetails {
+  to_account_name: string | null;
+}
+
+/** Transactions in an arbitrary [start, end] window (start null = all-time), joined for export. */
+export async function listTransactionsInRange(
+  start: string | null,
+  end: string,
+  opts?: { limit?: number },
+): Promise<TransactionExportRow[]> {
+  const db = await getDb();
+  const endExclusive = addDaysKey(end, 1);
+  const conds = ['t.occurred_at < ?'];
+  const params: unknown[] = [endExclusive];
+  if (start) { conds.unshift('t.occurred_at >= ?'); params.unshift(start); }
+  const sql = `
+    SELECT t.*, c.name as category_name, c.icon as category_icon, c.color as category_color,
+           a.name as account_name, ta.name as to_account_name
+    FROM transactions t
+    LEFT JOIN categories c ON c.id = t.category_id
+    JOIN accounts a ON a.id = t.account_id
+    LEFT JOIN accounts ta ON ta.id = t.to_account_id
+    WHERE ${conds.join(' AND ')}
+    ORDER BY t.occurred_at DESC
+    ${opts?.limit ? 'LIMIT ?' : ''}
+  `;
+  if (opts?.limit) params.push(opts.limit);
+  return db.getAllAsync<TransactionExportRow>(sql, params);
 }
 
 export async function getMonthlyTrend(months: string[]): Promise<MonthSummary[]> {

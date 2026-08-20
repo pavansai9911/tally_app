@@ -10,6 +10,23 @@ from `package.json` — the single source of truth, from which `versionName` and
 
 ---
 
+## [1.5.0] — 2026-08-20
+
+### Added
+- **Multi-format Reports export (PDF / CSV / JSON).** The Reports header export icon and Settings →
+  Export data now open an export sheet: pick a date range (This month / 3M / 6M / All time / Custom,
+  via two `DateField` pickers) and a format, defaulting to **This month** and **PDF**. PDF renders a
+  branded, paginated A4 report (summary tiles, expense-by-category breakdown, transaction table) via
+  `react-native-html-to-pdf` **pinned to 0.12.0** — the 1.x line was rewritten as a TurboModule-only
+  spec, incompatible with this project's `newArchEnabled=false` (see CLAUDE.md §12). CSV keeps its
+  original 6-column shape (only the row set is now date-filtered); JSON adds a structured export with
+  a summary + full transaction list. A staged "Fetching → Preparing → Formatting → Finalizing"
+  overlay covers processing, and the result goes through the existing OS share sheet.
+- `src/db/transactions.ts`: `listTransactionsInRange`, `getSummaryInRange`, `getExpenseBreakdownInRange`
+  — day-precision range queries (existing report queries were month-aligned only).
+
+---
+
 ## [1.4.3] — 2026-08-12
 
 ### Added

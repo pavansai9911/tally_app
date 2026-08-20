@@ -18,7 +18,7 @@ import {
   getMonthSummary, getRangeSummary, getExpenseBreakdownByCategory, getExpenseBreakdownByRange, getMonthlyTrend,
   listHabits, calculateStreaks, getLogsInRange,
 } from '@/db';
-import { exportTransactionsCsv } from '@/services/backup';
+import { useExport } from '@/components/ExportSheet';
 import { ReportsStackParamList } from '@/navigation/RootNavigator';
 
 type Props = NativeStackScreenProps<ReportsStackParamList, 'Reports'>;
@@ -35,6 +35,7 @@ function lastNMonthKeys(n: number): string[] {
 
 export default function ReportsScreen({ navigation }: Props) {
   const { colors, typography, radius } = useTheme();
+  const openExport = useExport();
   const [tab, setTab] = useState<'money' | 'habits'>('money');
   const [period, setPeriod] = useState<PeriodKey>('month');
 
@@ -120,7 +121,7 @@ export default function ReportsScreen({ navigation }: Props) {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 12, paddingBottom: 12 }}>
         <Text style={{ ...typography.h1, color: colors.neutral900 }}>Reports</Text>
-        <Pressable onPress={() => exportTransactionsCsv().catch(() => {})} hitSlop={8} accessibilityLabel="Export transactions as CSV">
+        <Pressable onPress={openExport} hitSlop={8} accessibilityLabel="Export report">
           <Feather name="share" size={19} color={colors.neutral900} />
         </Pressable>
       </View>

@@ -118,7 +118,8 @@ export async function hasRealUserData(): Promise<boolean> {
   return Object.values(backup.data).some(rows => rows.length > 0);
 }
 
-function timestampSlug(): string {
+/** Shared by backup/CSV/JSON/PDF export filenames — 'YYYYMMDD-HHMM' local time. */
+export function timestampSlug(): string {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
@@ -133,42 +134,6 @@ export async function exportBackup(): Promise<void> {
   await Share.open({
     url: `file://${path}`,
     type: 'application/json',
-    filename,
-    failOnCancel: false,
-  });
-}
-
-/** Export all transactions as a CSV and open the share sheet. */
-export async function exportTransactionsCsv(): Promise<void> {
-  const db = await getDb();
-  const rows = await db.getAllAsync<{
-    occurred_at: string; type: string; amount: number; category_name: string | null;
-    account_name: string; note: string | null;
-  }>(`
-    SELECT t.occurred_at, t.type, t.amount, c.name AS category_name, a.name AS account_name, t.note
-    FROM transactions t
-    LEFT JOIN categories c ON c.id = t.category_id
-    JOIN accounts a ON a.id = t.account_id
-    ORDER BY t.occurred_at DESC
-  `);
-
-  const esc = (v: unknown) => {
-    const s = v == null ? '' : String(v);
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  };
-  // occurred_at is 'YYYY-MM-DD HH:MM' (older rows may be date-only).
-  const header = 'Date & time,Type,Amount,Category,Account,Note';
-  const lines = rows.map((r) =>
-    [r.occurred_at, r.type, r.amount, r.category_name ?? '', r.account_name, r.note ?? ''].map(esc).join(','),
-  );
-  const csv = [header, ...lines].join('\n');
-
-  const filename = `tally-transactions-${timestampSlug()}.csv`;
-  const path = `${RNFS.CachesDirectoryPath}/${filename}`;
-  await RNFS.writeFile(path, csv, 'utf8');
-  await Share.open({
-    url: `file://${path}`,
-    type: 'text/csv',
     filename,
     failOnCancel: false,
   });
