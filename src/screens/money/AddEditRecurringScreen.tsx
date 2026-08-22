@@ -72,10 +72,17 @@ export default function AddEditRecurringScreen({ navigation, route }: Props) {
       type, name, amount: parseFloat(amount), category_id: categoryId, account_id: accountId,
       frequency, next_date: nextDate, auto_add: autoAdd ? 1 : 0,
     };
-    if (editId) await updateRecurringRule(editId, payload);
-    else await createRecurringRule(payload);
-    haptic('notificationSuccess');
-    navigation.goBack();
+    if (editId) {
+      await updateRecurringRule(editId, payload);
+      haptic('notificationSuccess');
+      navigation.goBack();
+    } else {
+      await createRecurringRule(payload);
+      haptic('notificationSuccess');
+      // Land on the list (not goBack) so a rule created from the Money quick-actions menu — which
+      // never pushed RecurringList onto the stack — still shows the user their new rule.
+      navigation.navigate('RecurringList');
+    }
   }
 
   function handleDelete() {
@@ -98,6 +105,12 @@ export default function AddEditRecurringScreen({ navigation, route }: Props) {
         <Pressable onPress={handleSave}><Text style={{ ...typography.bodyMedium, fontWeight: '600', color: colors.accent500 }}>Save</Text></Pressable>
       </View>
       <ScrollView contentContainerStyle={{ paddingHorizontal: 24 }}>
+        {!editId && (
+          <Pressable onPress={() => navigation.navigate('RecurringList')} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 18 }}>
+            <Feather name="list" size={14} color={colors.accent500} />
+            <Text style={{ ...typography.bodySmallMedium, color: colors.accent500 }}>View existing recurring rules</Text>
+          </Pressable>
+        )}
         <View style={{ flexDirection: 'row', gap: 8, marginBottom: 18 }}>
           <SegmentOption label="Expense" selected={type === 'expense'} onPress={() => setType('expense')} selectedBg={colors.expenseTint} selectedFg={colors.expense} />
           <SegmentOption label="Income" selected={type === 'income'} onPress={() => setType('income')} selectedBg={colors.incomeTint} selectedFg={colors.income} />

@@ -171,6 +171,11 @@ forgotten:
 - The Home/Accounts hero cards stay dark in **both** themes: `isDark ? neutral200 : neutral900`.
 - Bottom tabs: Home, Money, Habits, Reports. **Tapping the Money tab always resets to the
   Transactions screen** (a `tabPress` listener) so it never reopens a deep inner screen.
+- **Money's "+" FAB opens a 6-action quick-actions menu** (New Transaction / Filters / Budgets /
+  Accounts / Categories / Create Recurring Spend), not a direct Add Transaction — the header no
+  longer carries its own icons (v1.6.0); everything they did moved into this menu. Recurring rules
+  (view/edit/delete) are reachable via a link on the Add/Edit Recurring screen and the Assistant's
+  `recurring` intent, since `RecurringListScreen` no longer has a header entry point.
 - Page transitions: `slide_from_right` for stacks, `slide_from_bottom` for modals, cross-fade
   between tabs. **Settings uses `animation: 'fade'`** (side-slide felt out of place there).
   Configured once in `RootNavigator`.

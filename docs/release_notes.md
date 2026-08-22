@@ -6,6 +6,16 @@ For the engineering view, see [../CHANGELOG.md](../CHANGELOG.md).
 
 ---
 
+## Version 1.6.0
+
+**A quicker way to get around Money**
+
+- Tapping **+** on the Money tab now opens a quick-actions menu instead of jumping straight to
+  Add Transaction: **New Transaction**, **Filters**, **Budgets**, **Accounts**, **Categories**,
+  and **Create Recurring Spend** — all in one tap.
+- The Money screen's top-right icons are gone; everything they did now lives in that same menu.
+- Reports' export icon now says **"Export"** next to it, so it's clear what it does at a glance.
+
 ## Version 1.5.0
 
 **A real export, with a PDF report**

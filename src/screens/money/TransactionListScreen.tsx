@@ -24,6 +24,15 @@ export default function TransactionListScreen({ navigation }: Props) {
   const [fCategory, setFCategory] = useState<string | null>(null);
   const [fMonth, setFMonth] = useState<string | null>(null);
 
+  // "+" opens this action menu instead of jumping straight to Add Transaction. Closing it before
+  // running the chosen action (rather than layering a second Modal/navigation on top) avoids two
+  // Android modal transitions animating at once.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const runAction = useCallback((fn: () => void) => {
+    setMenuOpen(false);
+    setTimeout(fn, 250);
+  }, []);
+
   const load = useCallback(async () => {
     const tx = await listTransactions();
     setTransactions(tx);
@@ -80,30 +89,8 @@ export default function TransactionListScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }}>
-      <View style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+      <View style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 12 }}>
         <Text style={{ ...typography.h1, color: colors.neutral900 }}>Transactions</Text>
-        <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
-          <Pressable onPress={() => setFilterOpen(true)} hitSlop={6} accessibilityLabel="Filter transactions">
-            <Feather name="sliders" size={20} color={activeCount > 0 ? colors.accent500 : colors.neutral900} />
-            {activeCount > 0 && (
-              <View style={{ position: 'absolute', top: -5, right: -6, minWidth: 15, height: 15, borderRadius: 8, paddingHorizontal: 3, backgroundColor: colors.accent500, alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ fontSize: 9, fontWeight: '700', color: '#FFFFFF' }}>{activeCount}</Text>
-              </View>
-            )}
-          </Pressable>
-          <Pressable onPress={() => navigation.navigate('CategoriesList')}>
-            <Feather name="grid" size={20} color={colors.neutral900} />
-          </Pressable>
-          <Pressable onPress={() => navigation.navigate('AccountsList')}>
-            <Feather name="home" size={20} color={colors.neutral900} />
-          </Pressable>
-          <Pressable onPress={() => navigation.navigate('BudgetsList')}>
-            <Feather name="pie-chart" size={20} color={colors.neutral900} />
-          </Pressable>
-          <Pressable onPress={() => navigation.navigate('RecurringList')}>
-            <Feather name="repeat" size={20} color={colors.neutral900} />
-          </Pressable>
-        </View>
       </View>
 
       {activeCount > 0 && (
@@ -198,7 +185,8 @@ export default function TransactionListScreen({ navigation }: Props) {
       )}
 
       <Pressable
-        onPress={() => navigation.navigate('AddEditTransaction', undefined)}
+        onPress={() => setMenuOpen(true)}
+        accessibilityLabel="Quick actions"
         style={{
           position: 'absolute', bottom: 24, right: 24, width: 56, height: 56, borderRadius: 28,
           backgroundColor: colors.accent500, alignItems: 'center', justifyContent: 'center',
@@ -207,6 +195,50 @@ export default function TransactionListScreen({ navigation }: Props) {
       >
         <Feather name="plus" size={26} color="#FFFFFF" />
       </Pressable>
+
+      <Modal visible={menuOpen} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setMenuOpen(false)}>
+        <Pressable style={{ flex: 1, backgroundColor: 'rgba(15,18,22,0.45)', justifyContent: 'flex-end' }} onPress={() => setMenuOpen(false)}>
+          <Pressable onPress={() => {}} style={{ backgroundColor: colors.surfaceCard, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 16, paddingBottom: 32, paddingHorizontal: 24 }}>
+            <View style={{ width: 36, height: 4, backgroundColor: colors.neutral200, borderRadius: 2, alignSelf: 'center', marginBottom: 16 }} />
+            <Text style={{ ...typography.h3, color: colors.neutral900, marginBottom: 16 }}>Quick actions</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+              <ActionCard
+                label="New Transaction" icon="plus-circle" fg={colors.accent500} bg={colors.accentTint}
+                onPress={() => runAction(() => navigation.navigate('AddEditTransaction', undefined))}
+                colors={colors} typography={typography} radius={radius}
+              />
+              <ActionCard
+                label="Filters" icon="sliders" fg={colors.neutral700} bg={colors.neutral100}
+                onPress={() => runAction(() => setFilterOpen(true))}
+                colors={colors} typography={typography} radius={radius}
+              />
+              <ActionCard
+                label="Budgets" icon="pie-chart" fg={colors.warning} bg={colors.warningTint}
+                onPress={() => runAction(() => navigation.navigate('BudgetsList'))}
+                colors={colors} typography={typography} radius={radius}
+              />
+              <ActionCard
+                label="Accounts" icon="home" fg={colors.income} bg={colors.incomeTint}
+                onPress={() => runAction(() => navigation.navigate('AccountsList'))}
+                colors={colors} typography={typography} radius={radius}
+              />
+              <ActionCard
+                label="Categories" icon="grid" fg={colors.accent500} bg={colors.accentTint}
+                onPress={() => runAction(() => navigation.navigate('CategoriesList'))}
+                colors={colors} typography={typography} radius={radius}
+              />
+              <ActionCard
+                label="Create Recurring Spend" icon="repeat" fg={colors.expense} bg={colors.expenseTint}
+                onPress={() => runAction(() => navigation.navigate('AddEditRecurring', undefined))}
+                colors={colors} typography={typography} radius={radius}
+              />
+            </View>
+            <Pressable onPress={() => setMenuOpen(false)} style={{ height: 50, borderRadius: radius.lg, backgroundColor: colors.surfaceSunken, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ ...typography.button, color: colors.neutral900 }}>Cancel</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       <Modal visible={filterOpen} transparent animationType="slide" statusBarTranslucent onRequestClose={() => setFilterOpen(false)}>
         <Pressable style={{ flex: 1, backgroundColor: 'rgba(15,18,22,0.45)', justifyContent: 'flex-end' }} onPress={() => setFilterOpen(false)}>
@@ -266,6 +298,22 @@ export default function TransactionListScreen({ navigation }: Props) {
 
 function FilterLabel({ text, colors, typography }: { text: string; colors: any; typography: any }) {
   return <Text style={{ ...typography.caption, color: colors.neutral400, textTransform: 'uppercase', marginBottom: 10 }}>{text}</Text>;
+}
+
+function ActionCard({ label, icon, fg, bg, onPress, colors, typography, radius }: {
+  label: string; icon: string; fg: string; bg: string; onPress: () => void; colors: any; typography: any; radius: any;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={{ flexBasis: '47%', flexGrow: 1, alignItems: 'center', gap: 10, paddingVertical: 18, borderRadius: radius.lg, backgroundColor: colors.surfaceSunken }}
+    >
+      <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
+        <Feather name={icon} size={22} color={fg} />
+      </View>
+      <Text style={{ ...typography.bodySmallMedium, color: colors.neutral900, textAlign: 'center' }}>{label}</Text>
+    </Pressable>
+  );
 }
 
 function FilterChip({ label, onClear, colors, typography }: { label: string; onClear: () => void; colors: any; typography: any }) {

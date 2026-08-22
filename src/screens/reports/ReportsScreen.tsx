@@ -121,7 +121,8 @@ export default function ReportsScreen({ navigation }: Props) {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 12, paddingBottom: 12 }}>
         <Text style={{ ...typography.h1, color: colors.neutral900 }}>Reports</Text>
-        <Pressable onPress={openExport} hitSlop={8} accessibilityLabel="Export report">
+        <Pressable onPress={openExport} hitSlop={8} accessibilityLabel="Export report" style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text style={{ ...typography.bodySmallMedium, color: colors.neutral900 }}>Export</Text>
           <Feather name="share" size={19} color={colors.neutral900} />
         </Pressable>
       </View>

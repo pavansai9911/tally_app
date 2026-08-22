@@ -10,6 +10,23 @@ from `package.json` — the single source of truth, from which `versionName` and
 
 ---
 
+## [1.6.0] — 2026-08-22
+
+### Added
+- **Money "+" quick-actions menu.** Tapping the Money tab's FAB now opens a 6-action bottom-sheet
+  menu instead of jumping straight to Add Transaction: **New Transaction**, **Filters**,
+  **Budgets**, **Accounts**, **Categories**, **Create Recurring Spend**. Filters/Budgets/Accounts/
+  Categories keep navigating to their existing screens unchanged; Create Recurring Spend opens
+  `AddEditRecurringScreen` directly, landing on `RecurringListScreen` after save instead of
+  `goBack()` (that screen was never on the stack when opened this way). The 5 icons this replaced
+  from the Money header (filter/categories/accounts/budgets/recurring) are removed — Recurring
+  rules stay reachable via a "View existing recurring rules" link on the (now header-icon-less)
+  Add/Edit Recurring screen, and via the Tally Assistant's existing `recurring` intent.
+- Reports header's export icon now carries an "Export" text label so its purpose is obvious at a
+  glance, not just an icon.
+
+---
+
 ## [1.5.0] — 2026-08-20
 
 ### Added
