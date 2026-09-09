@@ -10,6 +10,60 @@ from `package.json` — the single source of truth, from which `versionName` and
 
 ---
 
+## [1.6.0] — 2026-08-22
+
+### Added
+- **Money "+" quick-actions menu.** Tapping the Money tab's FAB now opens a 6-action bottom-sheet
+  menu instead of jumping straight to Add Transaction: **New Transaction**, **Filters**,
+  **Budgets**, **Accounts**, **Categories**, **Create Recurring Spend**. Filters/Budgets/Accounts/
+  Categories keep navigating to their existing screens unchanged; Create Recurring Spend opens
+  `AddEditRecurringScreen` directly, landing on `RecurringListScreen` after save instead of
+  `goBack()` (that screen was never on the stack when opened this way). The 5 icons this replaced
+  from the Money header (filter/categories/accounts/budgets/recurring) are removed — Recurring
+  rules stay reachable via a "View existing recurring rules" link on the (now header-icon-less)
+  Add/Edit Recurring screen, and via the Tally Assistant's existing `recurring` intent.
+- Reports header's export icon now carries an "Export" text label so its purpose is obvious at a
+  glance, not just an icon.
+
+---
+
+## [1.5.0] — 2026-08-20
+
+### Added
+- **Multi-format Reports export (PDF / CSV / JSON).** The Reports header export icon and Settings →
+  Export data now open an export sheet: pick a date range (This month / 3M / 6M / All time / Custom,
+  via two `DateField` pickers) and a format, defaulting to **This month** and **PDF**. PDF renders a
+  branded, paginated A4 report (summary tiles, expense-by-category breakdown, transaction table) via
+  `react-native-html-to-pdf` **pinned to 0.12.0** — the 1.x line was rewritten as a TurboModule-only
+  spec, incompatible with this project's `newArchEnabled=false` (see CLAUDE.md §12). CSV keeps its
+  original 6-column shape (only the row set is now date-filtered); JSON adds a structured export with
+  a summary + full transaction list. A staged "Fetching → Preparing → Formatting → Finalizing"
+  overlay covers processing, and the result goes through the existing OS share sheet.
+- `src/db/transactions.ts`: `listTransactionsInRange`, `getSummaryInRange`, `getExpenseBreakdownInRange`
+  — day-precision range queries (existing report queries were month-aligned only).
+
+---
+
+## [1.4.3] — 2026-08-12
+
+### Added
+- **Production-grade App Launch Splash Screen.** Added a native Android window background splash screen (with Tally logo centered on blue background) and a matching React Native loading state splash screen for a completely seamless, premium startup transition.
+
+### Removed
+- **Unused shuffle icon from Habits tab.** Cleaned up the Habits screen header layout by completely removing the non-functional top-right shuffle icon and its container styling.
+
+---
+
+## [1.4.2] — 2026-08-11
+
+### Fixed
+- **Reports entrance animations removed.** The Expense Breakdown, Income vs Expense, and Balance
+  Trend sections no longer fade/slide in when the Reports tab opens — they appear immediately in
+  their final position. The horizontal swipe animation between the Money and Habits inner tabs is
+  unaffected.
+
+---
+
 ## [1.4.1] — 2026-08-03
 
 ### Fixed

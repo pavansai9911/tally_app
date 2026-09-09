@@ -17,7 +17,8 @@ import { SEED_RANGES, SeedRange, seedSampleData, clearSampleData, hasSampleData 
 import { sendTestReminder, scheduledReminderCount, rescheduleAllHabitReminders } from '@/services/notifications';
 import { mapIcon, CATEGORY_COLOR_OPTIONS } from '@/utils/iconMap';
 import { formatCurrency } from '@/utils/format';
-import { exportBackup, exportTransactionsCsv, importBackupInteractive } from '@/services/backup';
+import { exportBackup, importBackupInteractive } from '@/services/backup';
+import { useExport } from '@/components/ExportSheet';
 import { resetDbHandle } from '@/db/database';
 import SetPinScreen from '@/screens/lock/SetPinScreen';
 import VerifyPinScreen from '@/screens/lock/VerifyPinScreen';
@@ -30,6 +31,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'SettingsSub'>;
 export default function SettingsSubScreen({ navigation, route }: Props) {
   const { colors, typography, radius, mode, setMode } = useTheme();
   const confirm = useConfirm();
+  const openExport = useExport();
   const { section } = route.params;
   const [accounts, setAccounts] = useState<AccountWithBalance[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -164,17 +166,6 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
       );
     }
     return <SetPinScreen title="Set new PIN" onCancel={() => navigation.goBack()} onDone={() => navigation.goBack()} />;
-  }
-
-  async function handleExportCsv() {
-    setBusy('csv');
-    try {
-      await exportTransactionsCsv();
-    } catch {
-      confirm({ title: 'Export failed', message: 'Could not create the CSV file.', icon: 'alert-circle', tone: 'danger' });
-    } finally {
-      setBusy(null);
-    }
   }
 
   async function handleExportBackup() {
@@ -314,10 +305,10 @@ export default function SettingsSubScreen({ navigation, route }: Props) {
         {section === 'export' && (
           <View>
             <Text style={{ ...typography.body, color: colors.neutral500, marginBottom: 20, lineHeight: 21 }}>
-              Export your transactions as a CSV file you can open in any spreadsheet, or save a full backup you can restore later.
+              Export a report of your transactions — pick a date range and PDF, CSV or JSON — or save a full backup you can restore later.
             </Text>
             <View style={{ gap: 12 }}>
-              <Button label={busy === 'csv' ? 'Preparing…' : 'Export transactions (CSV)'} onPress={handleExportCsv} icon={<Feather name="file-text" size={17} color="#FFFFFF" />} />
+              <Button label="Export report" onPress={openExport} icon={<Feather name="file-text" size={17} color="#FFFFFF" />} />
               <Button label={busy === 'backup' ? 'Preparing…' : 'Export full backup (JSON)'} variant="secondary" onPress={handleExportBackup} icon={<Feather name="download" size={17} color={colors.neutral900} />} />
             </View>
           </View>

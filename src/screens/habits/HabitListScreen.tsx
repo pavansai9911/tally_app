@@ -61,9 +61,8 @@ export default function HabitListScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.surfaceCard }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 12, paddingBottom: 12 }}>
+      <View style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 12 }}>
         <Text style={{ ...typography.h1, color: colors.neutral900 }}>Habits</Text>
-        <Feather name="shuffle" size={20} color={tab === 'all' ? colors.accent500 : colors.neutral900} />
       </View>
 
       <SwipeTabs labels={['Today', 'All habits']} index={tab === 'today' ? 0 : 1} onIndexChange={(i) => setTab(i === 0 ? 'today' : 'all')}>

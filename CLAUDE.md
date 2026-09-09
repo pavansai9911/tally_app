@@ -12,7 +12,7 @@ true as the code evolves.
 | **App** | Tally — offline personal money + habit tracker |
 | **Package** | `com.tally.app` |
 | **Platform** | Android only (no iOS project) |
-| **Current version** | see `package.json` → `version` (single source of truth) |
+| **Current version** | see `package.json` → `version` (single source of truth) — currently **1.5.0** |
 | **Branch** | `rn-cli-migration` (the original Expo app is on `main`) |
 | **Related docs** | [PROJECT_RULES.md](PROJECT_RULES.md) · [BUILD.md](BUILD.md) · [DECISIONS.md](DECISIONS.md) · [docs/architecture.md](docs/architecture.md) · [docs/ui_guidelines.md](docs/ui_guidelines.md) · [CHANGELOG.md](CHANGELOG.md) |
 
@@ -48,6 +48,7 @@ Primary jobs the app does:
 | Security | `react-native-keychain` + `react-native-biometrics` + `js-sha256` | |
 | Notifications | `@notifee/react-native` | Local only |
 | Files | `@dr.pogodin/react-native-fs`, `@react-native-documents/picker`, `react-native-share` | Backup/CSV |
+| PDF export | `react-native-html-to-pdf` **pinned exactly 0.12.0** | See §12 — 1.x is TurboModule-only |
 | Pickers | `@react-native-community/datetimepicker` | |
 | Haptics | `react-native-haptic-feedback` | |
 
@@ -170,6 +171,11 @@ forgotten:
 - The Home/Accounts hero cards stay dark in **both** themes: `isDark ? neutral200 : neutral900`.
 - Bottom tabs: Home, Money, Habits, Reports. **Tapping the Money tab always resets to the
   Transactions screen** (a `tabPress` listener) so it never reopens a deep inner screen.
+- **Money's "+" FAB opens a 6-action quick-actions menu** (New Transaction / Filters / Budgets /
+  Accounts / Categories / Create Recurring Spend), not a direct Add Transaction — the header no
+  longer carries its own icons (v1.6.0); everything they did moved into this menu. Recurring rules
+  (view/edit/delete) are reachable via a link on the Add/Edit Recurring screen and the Assistant's
+  `recurring` intent, since `RecurringListScreen` no longer has a header entry point.
 - Page transitions: `slide_from_right` for stacks, `slide_from_bottom` for modals, cross-fade
   between tabs. **Settings uses `animation: 'fade'`** (side-slide felt out of place there).
   Configured once in `RootNavigator`.
@@ -226,8 +232,10 @@ for weeks still produces the right history.
 
 ### Backup / export (`src/services/backup.ts`)
 Portable JSON snapshot of every table via the share sheet; restore replaces all data inside one
-transaction. The PIN salt is never exported. CSV export is separate. The transactional replace
-lives in `applyBackupObject()` and is shared by manual restore and automatic restore.
+transaction. The PIN salt is never exported. The transactional replace lives in
+`applyBackupObject()` and is shared by manual restore and automatic restore. This is a disaster-
+recovery snapshot, distinct from the **Reports export** below — see that section for CSV/JSON/PDF.
+`timestampSlug()` (the `YYYYMMDD-HHMM` filename suffix) is exported and shared with `export.ts`.
 
 ### Automatic local backup (`src/services/autoBackup.ts` + native `TallyBackupModule.kt`)
 Keeps an always-current **encrypted** snapshot of the user's **real** data in a public
@@ -265,13 +273,45 @@ explicit intents; the drafted email is carried on `AssistantReply.feedback` and 
 UI via the reserved `__send_feedback__` action — mirroring the `__close__` pattern, so the offline
 engine never touches `Linking`).
 
+### Reports export (`src/services/export.ts` + `src/components/ExportSheet.tsx`)
+Multi-format export of transactions in a user-chosen date range — PDF (default), CSV or JSON.
+Opened from the Reports header icon and Settings → Export data, both via `useExport()` (an
+`ExportProvider` mounted in `App.tsx` alongside `ConfirmProvider`, same shape as `useConfirm()`).
+- **Date range** defaults to **This month**; presets mirror `utils/period.ts`'s `PeriodKey` (3M/6M/
+  All time) plus a **Custom** option using two `DateField` pickers. Resolution to a concrete
+  day-precision `{start, end}` window lives in `utils/exportRange.ts` — deliberately separate from
+  `period.ts`, which is month-aligned only and has no custom range.
+- **DB layer**: `listTransactionsInRange` / `getSummaryInRange` / `getExpenseBreakdownInRange` in
+  `src/db/transactions.ts` are day-precision siblings of the month-aligned `getRangeSummary` /
+  `getExpenseBreakdownByRange`. All three compare `occurred_at` against `addDaysKey(end, 1)`
+  (exclusive) rather than `<= end`, which keeps the existing tolerance for both `'YYYY-MM-DD'` and
+  `'YYYY-MM-DD HH:MM'` rows.
+- **CSV** keeps its original 6-column shape exactly (`Date & time,Type,Amount,Category,Account,Note`)
+  — only the row set changed (now range-filtered); nothing reads this file format-sensitively, but
+  there was no reason to churn it.
+- **PDF** is rendered from an HTML string via `react-native-html-to-pdf`, **pinned exactly 0.12.0**
+  (see §12 — do not upgrade to 1.x). A4 size is set explicitly (`width:595, height:842` points);
+  the library forces zero native print margins when a custom page size is given, so visual margins
+  come entirely from the HTML's own `@page { margin: … }` CSS. The detail transaction table is
+  capped at 2,000 rows (`PDF_ROW_CAP`) for WebView render time — comfortably above the seeder's own
+  "large" dataset ceiling (~2,600 rows); CSV/JSON stay uncapped since they're plain text.
+- **Processing overlay**: a 4-stage sequence (Fetching → Preparing → Formatting → Finalizing) with a
+  small minimum dwell per stage (`withMinDelay` in `export.ts`) so fast steps don't flash by
+  unreadably, without ever holding up work that's genuinely slower (e.g. PDF conversion).
+- Sharing reuses the exact `RNFS.writeFile` → `Share.open` pattern from `backup.ts` (cache dir,
+  `failOnCancel: false`).
+
 ### Reports charts (`src/components/charts.tsx`)
-Custom SVG charts. Each takes an optional `animateTrigger`; `ReportsScreen` bumps it on focus +
-period change so the donut (clockwise draw), Income-vs-Expense bars (grow-up) and balance line
-(left-to-right draw) replay their entrance every time Reports opens. The donut legend shows the top
-4 categories + a **Remaining** roll-up; Remaining and the donut centre open `ExpenseCategoriesScreen`
-(all categories by %); category taps open `CategoryDrilldownScreen`, which is **period-aware**
-(`matchesPeriod` in `utils/period.ts`) so drill-downs work for every period, not just the month.
+Custom SVG charts. Each accepts an optional `animateTrigger`; as of v1.4.2 **`ReportsScreen` no
+longer passes `animateTrigger` to the donut, bar or line charts**, so the three Money sections
+(Expense Breakdown, Income vs Expense, Balance Trend) appear immediately at their final state when
+the Reports tab opens. The `FadeInView` wrapper was also removed from the Money sections (it remains
+on the Habits tab content). The `useRevealValue` hook in `charts.tsx` starts its animation at `t=0`
+on mount, so passing `animateTrigger` would re-run the draw-in; omitting it means the chart renders
+fully drawn. The donut legend shows the top 4 categories + a **Remaining** roll-up; Remaining and
+the donut centre open `ExpenseCategoriesScreen` (all categories by %); category taps open
+`CategoryDrilldownScreen`, which is **period-aware** (`matchesPeriod` in `utils/period.ts`) so
+drill-downs work for every period, not just the month.
 
 ---
 
@@ -333,6 +373,7 @@ ideally opt-in, and the offline engine should remain as the fallback.
 | `allowBackup=false` | A finance app should not auto-sync its DB to Google cloud backup. (This is Android's *cloud* backup; unrelated to Tally's own local Tally-tracker backup.) |
 | SVG assistant avatar | Crisp at any density, themeable, no binary asset, no licensing risk. |
 | Status bar not translucent | Translucent modals break keyboard avoidance on Android and overlapped screen headers. |
+| `react-native-html-to-pdf` pinned **exactly 0.12.0**, not the 1.x line | 1.0.0+ (published 2025-09) was rewritten as a TurboModule-only native module (`NativeHtmlToPdfSpec`, `TurboModuleRegistry.getEnforcing`) — the exact class of interop failure `newArchEnabled=false` exists to avoid (see the op-sqlite row above). 0.12.0 is the last release built as a classic `ReactContextBaseJavaModule`/`RNHTMLtoPDFModule.java` bridge module, verified to compile and link under this project's classic architecture. Its manifest declares no permissions and it writes to the app cache dir only — no manifest/permission changes needed. |
 
 ---
 

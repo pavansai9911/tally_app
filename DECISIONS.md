@@ -118,10 +118,22 @@ pulled in a screens version built for a newer React Native.
 
 ---
 
+---
+
+## Phase 9 — Reports export: PDF/CSV/JSON (2026-08-20, v1.5.0)
+
+| # | Decision | Why |
+|---|----------|-----|
+| 9.1 | `react-native-html-to-pdf` pinned **exactly `0.12.0`**, not the current `1.x` line | `npm view` showed 1.0.0–1.3.0 (published 2025-09) were a full rewrite to a TurboModule-only spec (`NativeHtmlToPdfSpec` / `TurboModuleRegistry.getEnforcing`) — installed it, inspected the generated Android source, and found the same shape of interop failure documented in Phase 8.4 for op-sqlite, which `newArchEnabled=false` exists specifically to avoid. Downloaded and inspected the `0.12.0` tarball instead: it's a plain `ReactContextBaseJavaModule` bridge module (`RNHTMLtoPDFModule.java`), no TurboModule spec, empty `AndroidManifest.xml` (no permissions), writes only to the app cache dir. Verified end-to-end with a real `assembleRelease` build before committing to the approach. |
+| 9.2 | PDF rendered via HTML + this library's native WebView-print pipeline, not a hand-rolled `PdfDocument`/Canvas native module | Automatic, correct pagination across pages comes for free from the Android print framework; a hand-rolled Canvas layout would mean re-deriving page-break/text-measurement logic that this library already gets right, for a one-off report generator that isn't on any hot path. |
+| 9.3 | Day-precision range queries (`listTransactionsInRange`, `getSummaryInRange`, `getExpenseBreakdownInRange`) added as siblings to the existing month-aligned ones, rather than changing `getRangeSummary`/`getExpenseBreakdownByRange` | Those two are still used by `ReportsScreen`'s on-screen period selector, which is intentionally month-aligned (`'YYYY-MM'` prefix matching) — the export sheet needed an arbitrary day-level `[start, end]` window (esp. for "Custom"), which is a different comparison shape (`>= start AND < end+1day`), not a drop-in replacement. |
+
+---
+
 ## Known follow-ups (need a device / designer, can't be done/verified in this headless env)
 
 - **On-device QA**: run the app on a real Android device and exercise every flow (no Android SDK here, so only `tsc` + Metro bundle are verified).
-- **App icon + splash**: generate an adaptive launcher icon and a splash from a designed Tally logo (`assets/icon.png` is a starting point). Use Android Studio's Image Asset or `@bam.tech/react-native-make`.
+- **App icon**: generate an adaptive launcher icon from a designed Tally logo (`assets/icon.png` is a starting point). Splash screen is now fully implemented (v1.4.3).
 - **R8/ProGuard**: enable `enableProguardInReleaseBuilds` and add keep rules if any native lib needs them (test the release AAB after enabling).
 - **Play Console**: Data Safety form (declare "no data collected/shared"), privacy policy URL, store listing assets, content rating.
 

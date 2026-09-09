@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { View, ActivityIndicator, StatusBar } from 'react-native';
+import { View, ActivityIndicator, StatusBar, Image, Text } from 'react-native';
 import {
   NavigationContainer,
   DefaultTheme,
@@ -16,6 +16,7 @@ import LockScreen from '@/screens/lock/LockScreen';
 import RestoreGateScreen from '@/screens/onboarding/RestoreGateScreen';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ConfirmProvider } from '@/components/ConfirmDialog';
+import { ExportProvider } from '@/components/ExportSheet';
 import { AppControlProvider } from '@/components/AppControl';
 import { TourProvider } from '@/tour/TourProvider';
 import { runStartupTasks } from '@/services/startup';
@@ -101,8 +102,21 @@ function AppInner() {
 
   if (phase === 'loading') {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.neutral0 }}>
-        <ActivityIndicator color={colors.accent500} />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#1C32FF' }}>
+        <StatusBar barStyle="light-content" backgroundColor="#1C32FF" />
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Image
+            source={require('./assets/tally_logo.jpeg')}
+            style={{ width: 100, height: 100, borderRadius: 24, marginBottom: 20 }}
+            resizeMode="contain"
+          />
+          <Text style={{ fontSize: 32, fontWeight: '700', color: '#FFFFFF', letterSpacing: 0.5 }}>
+            Tally
+          </Text>
+        </View>
+        <View style={{ paddingBottom: 50 }}>
+          <ActivityIndicator color="#FFFFFF" size="small" />
+        </View>
       </View>
     );
   }
@@ -139,7 +153,9 @@ export default function App() {
       <SafeAreaProvider>
         <ThemeProvider>
           <ConfirmProvider>
-            <AppInner />
+            <ExportProvider>
+              <AppInner />
+            </ExportProvider>
           </ConfirmProvider>
         </ThemeProvider>
       </SafeAreaProvider>

@@ -6,6 +6,29 @@ For the engineering view, see [../CHANGELOG.md](../CHANGELOG.md).
 
 ---
 
+## Version 1.6.0
+
+**A quicker way to get around Money**
+
+- Tapping **+** on the Money tab now opens a quick-actions menu instead of jumping straight to
+  Add Transaction: **New Transaction**, **Filters**, **Budgets**, **Accounts**, **Categories**,
+  and **Create Recurring Spend** — all in one tap.
+- The Money screen's top-right icons are gone; everything they did now lives in that same menu.
+- Reports' export icon now says **"Export"** next to it, so it's clear what it does at a glance.
+
+## Version 1.5.0
+
+**A real export, with a PDF report**
+
+- The export icon on Reports (and Settings → *Export data*) now opens an export sheet: choose a
+  date range — this month, last 3 or 6 months, all time, or a custom range — and a format.
+- **PDF is new**, and it's the default: a proper A4 report with your income/expense/net summary,
+  an expense-by-category breakdown, and the full transaction list, ready to save or send on.
+- **JSON is new** too, for anyone who wants the raw data in a structured file.
+- CSV export still works exactly as before, now with the same date-range filtering.
+- A short "Fetching… Preparing… Formatting… Finalizing…" screen shows while your export is put
+  together, then hands off to your phone's normal share sheet — same as before.
+
 ## Version 1.4.1
 
 **Small polish**
