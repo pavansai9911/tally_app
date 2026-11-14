@@ -33,8 +33,13 @@ let suppressed = false;      // true while restoring, so restore writes don't tr
 let enabledCache = true;
 let initialized = false;
 
+// Release builds (see android/app/src/release/AndroidManifest.xml) strip
+// MANAGE_EXTERNAL_STORAGE for Play policy reasons, so the permission can never actually be
+// granted there — __DEV__ is false in exactly that build type, so this hides the feature
+// (Settings toggle + first-launch "Enable backup" gate) rather than showing dead-end UI that
+// can never succeed. Debug builds still exercise it fully.
 export function isNativeBackupAvailable(): boolean {
-  return !!Native;
+  return !!Native && __DEV__;
 }
 
 export async function isPermissionGranted(): Promise<boolean> {

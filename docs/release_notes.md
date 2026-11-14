@@ -6,6 +6,16 @@ For the engineering view, see [../CHANGELOG.md](../CHANGELOG.md).
 
 ---
 
+## Version 1.0.0 — first Google Play release
+
+**Tally is now on the Play Store (testing track)**
+
+- This is the first build distributed through Google Play. The version number restarts at 1.0.0
+  for the public listing — nothing about the app's features changed from the last internal build.
+- The automatic "survives an uninstall" backup to a public folder is turned off in this build only,
+  since it needs a storage permission Play restricts heavily. Your regular **Backup & Restore**
+  and **Export** (PDF/CSV/JSON) in Settings work exactly as before.
+
 ## Version 1.6.0
 
 **A quicker way to get around Money**

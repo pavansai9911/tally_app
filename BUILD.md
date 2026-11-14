@@ -283,8 +283,8 @@ With the phone connected and USB debugging on:
 
 ```bash
 adb logcat -c                                     # clear old logs
-adb shell am force-stop com.tally.app             # ensure a clean start
-adb shell am start -n com.tally.app/.MainActivity # launch it
+adb shell am force-stop com.tally_money_and_habit_tracker.app             # ensure a clean start
+adb shell am start -n com.tally_money_and_habit_tracker.app/com.tally.app.MainActivity # launch it
 # let it crash, then:
 adb logcat -d > /tmp/crash.log
 grep -A 40 "FATAL EXCEPTION" /tmp/crash.log       # the actual error + stack
