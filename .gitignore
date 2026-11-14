@@ -66,6 +66,9 @@ yarn-error.log
 # testing
 /coverage
 
+# Signed release artifacts (large binaries; distribute via Play Console, not git)
+/release-builds/
+
 # Yarn
 .yarn/*
 !.yarn/patches

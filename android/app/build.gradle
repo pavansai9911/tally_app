@@ -88,9 +88,14 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
+    // namespace stays com.tally.app — it only names the internal Kotlin package (R/BuildConfig
+    // classes, source dir com/tally/app), independent of the Play Store-facing applicationId.
+    // Changing it would require moving every .kt file and repackaging them; unnecessary churn
+    // since Play only cares about applicationId being globally unique.
     namespace "com.tally.app"
     defaultConfig {
-        applicationId "com.tally.app"
+        // Play Store unique id (com.tally.app was already taken). See CLAUDE.md/DECISIONS.md.
+        applicationId "com.tally_money_and_habit_tracker.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         // Version comes from package.json so the Settings screen (which imports the same

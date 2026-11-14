@@ -10,6 +10,17 @@
         src/debug/AndroidManifest.xml so Metro can serve JS.
       - SCHEDULE_EXACT_ALARM: reminders use alarmManager.allowWhileIdle (inexact, Doze-safe),
         so this permission is unnecessary and attracts Play policy review (CLAUDE.md §8).
+      - MANAGE_EXTERNAL_STORAGE / WRITE_EXTERNAL_STORAGE / READ_EXTERNAL_STORAGE: these back the
+        automatic public-folder backup (src/services/autoBackup.ts + TallyBackupModule.kt) that
+        lets a backup survive an uninstall. MANAGE_EXTERNAL_STORAGE is one of Play's most
+        restricted permissions — it requires a Permissions Declaration Form and is normally only
+        approved for apps whose core purpose is file management, which Tally is not. Stripping it
+        for the Play build is safe: every caller of isPermissionGranted()/hasAllFilesAccess()
+        already treats "not granted" as "auto-backup unavailable" and degrades gracefully (see
+        autoBackup.ts) — no crash, no data loss. The manual Backup & Restore and Export features
+        (src/services/backup.ts, export.ts) use the app's own cache dir + share sheet and need
+        none of these permissions, so they are unaffected. Sideloaded/debug builds keep the
+        feature — only the Play-distributed release drops it.
 
       tools:node="remove" tells the manifest merger to drop any matching permission a library
       contributes. This overlay applies to the release variant only; the debug variant is
@@ -17,5 +28,8 @@
     -->
     <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" tools:node="remove" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:node="remove" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove" />
 
 </manifest>

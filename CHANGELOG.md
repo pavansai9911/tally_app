@@ -10,6 +10,25 @@ from `package.json` — the single source of truth, from which `versionName` and
 
 ---
 
+## [1.0.0] — 2026-09-09
+
+First Google Play Store (testing track) release. **Version number is a deliberate public reset,
+not a rollback** — feature history through the pre-Play v1.6.0 stays in this changelog and the
+git log below; the Play listing starts its own 1.0.0 → onward numbering from here.
+
+### Changed
+- **Automatic public-folder backup is stripped from the Play release build only.**
+  `MANAGE_EXTERNAL_STORAGE` (plus the legacy `WRITE_EXTERNAL_STORAGE`/`READ_EXTERNAL_STORAGE`) is
+  one of Play's most restricted permissions and is normally only approved for apps whose core
+  purpose is file management — not worth the approval risk here. `android/app/src/release/AndroidManifest.xml`
+  now strips these permissions the same way it already strips `INTERNET`. Every caller already
+  treats "permission not granted" as "auto-backup unavailable" and degrades gracefully — no crash,
+  no data loss. Manual **Backup & Restore** and **Export** (PDF/CSV/JSON) are unaffected; they use
+  the app's own cache dir and the share sheet, not this permission. Sideloaded/debug builds keep
+  the full feature.
+
+---
+
 ## [1.6.0] — 2026-08-22
 
 ### Added

@@ -10,9 +10,9 @@ true as the code evolves.
 | | |
 |---|---|
 | **App** | Tally — offline personal money + habit tracker |
-| **Package** | `com.tally.app` |
+| **Package (Play Store applicationId)** | `com.tally_money_and_habit_tracker.app` (`com.tally.app` was already taken on Play; internal Kotlin `namespace`/source package stays `com.tally.app` — see §12) |
 | **Platform** | Android only (no iOS project) |
-| **Current version** | see `package.json` → `version` (single source of truth) — currently **1.5.0** |
+| **Current version** | see `package.json` → `version` (single source of truth) — currently **1.0.0** (public versioning reset for the first Play Store release; internal pre-release feature history through v1.6.0 stays in `CHANGELOG.md`/git log) |
 | **Branch** | `rn-cli-migration` (the original Expo app is on `main`) |
 | **Related docs** | [PROJECT_RULES.md](PROJECT_RULES.md) · [BUILD.md](BUILD.md) · [DECISIONS.md](DECISIONS.md) · [docs/architecture.md](docs/architecture.md) · [docs/ui_guidelines.md](docs/ui_guidelines.md) · [CHANGELOG.md](CHANGELOG.md) |
 
@@ -369,7 +369,7 @@ ideally opt-in, and the offline engine should remain as the fallback.
 | RN 0.81 (not 0.86) | 0.86 requires Node ≥22; the dev machine runs Node 20. |
 | System font, no bundled Inter | Custom font linking was untestable in the build environment; weight-based typography is reliable. |
 | No INTERNET in release | Backs the offline promise. Libraries merge INTERNET (and `SCHEDULE_EXACT_ALARM`) in, so `src/release/AndroidManifest.xml` strips them via `tools:node="remove"`; the debug manifest re-adds INTERNET for Metro. Confirm with `aapt2 dump permissions`. |
-| `MANAGE_EXTERNAL_STORAGE` added (v1.2.0) | The automatic-backup folder must outlive an uninstall, which on Android 11+ requires All-files access — there is no zero-permission alternative. It grants **no** network access; INTERNET stays stripped. Sideloaded app, so Play's restriction on this permission does not apply. |
+| `MANAGE_EXTERNAL_STORAGE` added (v1.2.0), **stripped from the Play release build** (v1.0.0 Play release) | The automatic-backup folder must outlive an uninstall, which on Android 11+ requires All-files access — there is no zero-permission alternative. It grants **no** network access; INTERNET stays stripped. It was fine while sideloaded, but it is one of Play's most restricted permissions (needs a Permissions Declaration Form, normally only approved for file-manager-type apps) — not worth the approval risk for a convenience feature. `android/app/src/release/AndroidManifest.xml` now strips it (and the legacy WRITE/READ_EXTERNAL_STORAGE) from the Play build only; the code already degrades gracefully with the permission absent (see `autoBackup.ts`), so manual Backup & Restore/Export still work fully — only the survives-uninstall auto-backup is unavailable in that build. |
 | `allowBackup=false` | A finance app should not auto-sync its DB to Google cloud backup. (This is Android's *cloud* backup; unrelated to Tally's own local Tally-tracker backup.) |
 | SVG assistant avatar | Crisp at any density, themeable, no binary asset, no licensing risk. |
 | Status bar not translucent | Translucent modals break keyboard avoidance on Android and overlapped screen headers. |
